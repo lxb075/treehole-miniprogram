@@ -1,0 +1,43 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/publish/publish",
+    "pages/rank/rank"
+  ],
+  "window": {
+    "backgroundColor": "#F5F7FA",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#67C23A",
+    "navigationBarTitleText": "校园树洞",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#67C23A",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "最新留言",
+        "iconPath": "images/tab/home.png",
+        "selectedIconPath": "images/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/publish/publish",
+        "text": "发布留言",
+        "iconPath": "images/tab/publish.png",
+        "selectedIconPath": "images/tab/publish-active.png"
+      },
+      {
+        "pagePath": "pages/rank/rank",
+        "text": "点赞排行",
+        "iconPath": "images/tab/rank.png",
+        "selectedIconPath": "images/tab/rank-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

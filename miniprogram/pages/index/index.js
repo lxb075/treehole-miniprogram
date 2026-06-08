@@ -1,0 +1,167 @@
+const db = wx.cloud.database()
+const app = getApp()
+
+Page({
+  data: {
+    messageList: [],
+    hasMore: true,
+    pageSize: 10,
+    lastTime: null
+  },
+
+  onLoad() {
+    this.loadMessages()
+  },
+
+  onShow() {
+    this.loadMessages()
+  },
+
+  loadMessages() {
+    const { pageSize, lastTime } = this.data
+    let query = db.collection('treehole_messages')
+      .orderBy('createTime', 'desc')
+      .limit(pageSize)
+
+    if (lastTime) {
+      query = query.lt('createTime', lastTime)
+    }
+
+    query.get().then(res => {
+      const messages = res.data.map(item => ({
+        ...item,
+        hasLiked: false,
+        likeCount: item.likeCount || 0
+      }))
+
+      this.checkUserLikes(messages)
+
+      if (messages.length < pageSize) {
+        this.setData({ hasMore: false })
+      }
+
+      if (messages.length > 0) {
+        this.setData({
+          messageList: lastTime ? [...this.data.messageList, ...messages] : messages,
+          lastTime: messages[messages.length - 1].createTime
+        })
+      }
+    }).catch(err => {
+      console.error('加载留言失败:', err)
+    })
+  },
+
+  checkUserLikes(messages) {
+    const userId = app.globalData.getUserId()
+    const messageIds = messages.map(m => m._id)
+
+    db.collection('treehole_likes')
+      .where({
+        userId,
+        messageId: db.command.in(messageIds)
+      }).get().then(res => {
+        const likedIds = new Set(res.data.map(item => item.messageId))
+        const updatedList = this.data.messageList.map(msg => ({
+          ...msg,
+          hasLiked: likedIds.has(msg._id)
+        }))
+        this.setData({ messageList: updatedList })
+      })
+  },
+
+  handleLike(e) {
+    const id = e.currentTarget.dataset.id
+    const hasLiked = e.currentTarget.dataset.liked === 'true'
+    const userId = app.globalData.getUserId()
+
+    if (hasLiked) {
+      this.cancelLike(id, userId)
+    } else {
+      this.addLike(id, userId)
+    }
+  },
+
+  addLike(messageId, userId) {
+    const newLike = {
+      messageId,
+      userId,
+      createTime: Date.now()
+    }
+
+    db.collection('treehole_likes').add({
+      data: newLike
+    }).then(() => {
+      return db.collection('treehole_messages')
+        .doc(messageId)
+        .update({
+          data: {
+            likeCount: db.command.inc(1)
+          }
+        })
+    }).then(() => {
+      this.updateLocalLike(messageId, true)
+      wx.showToast({ title: '点赞成功', icon: 'success' })
+    }).catch(err => {
+      console.error('点赞失败:', err)
+      wx.showToast({ title: '点赞失败', icon: 'none' })
+    })
+  },
+
+  cancelLike(messageId, userId) {
+    db.collection('treehole_likes')
+      .where({ messageId, userId })
+      .get().then(res => {
+        if (res.data.length > 0) {
+          return db.collection('treehole_likes').doc(res.data[0]._id).remove()
+        }
+      }).then(() => {
+        return db.collection('treehole_messages')
+          .doc(messageId)
+          .update({
+            data: {
+              likeCount: db.command.inc(-1)
+            }
+          })
+      }).then(() => {
+        this.updateLocalLike(messageId, false)
+        wx.showToast({ title: '已取消点赞', icon: 'success' })
+      }).catch(err => {
+        console.error('取消点赞失败:', err)
+        wx.showToast({ title: '取消失败', icon: 'none' })
+      })
+  },
+
+  updateLocalLike(messageId, hasLiked) {
+    const updatedList = this.data.messageList.map(msg => {
+      if (msg._id === messageId) {
+        return {
+          ...msg,
+          hasLiked,
+          likeCount: hasLiked ? msg.likeCount + 1 : msg.likeCount - 1
+        }
+      }
+      return msg
+    })
+    this.setData({ messageList: updatedList })
+  },
+
+  loadMore() {
+    if (!this.data.hasMore) return
+    this.loadMessages()
+  },
+
+  formatTime(timestamp) {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    return `${month}月${day}日`
+  }
+})
