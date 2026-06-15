@@ -18,6 +18,7 @@ Page({
   },
 
   loadMessages() {
+    var self = this
     const { pageSize, lastTime } = this.data
     const now = Date.now()
     const userId = app.globalData.getUserId()
@@ -35,198 +36,205 @@ Page({
     }
 
     query.get().then(res => {
-      const messages = res.data.map(item => ({
-        ...item,
-        hasLiked: false,
-        hasFavorited: (item.favoritedBy || []).indexOf(userId) > -1,
-        likeCount: item.likeCount || 0,
-        isExpired: item.expireTime && item.expireTime <= now && (item.favoritedBy || []).indexOf(userId) === -1,
-        remainingText: this.getRemainingText(item.expireTime, item.favoritedBy, userId)
-      }))
+      const messages = res.data.map(function(item) {
+        var remainingText = self.getRemainingText(item.expireTime, item.favoritedBy || [], userId)
+        return {
+          _id: item._id,
+          msgId: String(item._id),
+          content: item.content,
+          anonymousName: item.anonymousName,
+          likeCount: item.likeCount || 0,
+          createTime: item.createTime,
+          expireTime: item.expireTime,
+          favoritedBy: item.favoritedBy || [],
+          hasLiked: false,
+          hasFavorited: item.favoritedBy && item.favoritedBy.indexOf(userId) > -1,
+          isExpired: item.expireTime && item.expireTime <= now && (!item.favoritedBy || item.favoritedBy.indexOf(userId) === -1),
+          remainingText: remainingText
+        }
+      })
 
-      // 先显示列表，再异步查点赞状态
       if (messages.length < pageSize) {
         this.setData({ hasMore: false })
       }
       if (messages.length > 0) {
         this.setData({
-          messageList: lastTime ? [...this.data.messageList, ...messages] : messages,
+          messageList: lastTime ? this.data.messageList.concat(messages) : messages,
           lastTime: messages[messages.length - 1].createTime
         })
       }
 
-      // 异步查点赞状态
-      this.checkUserLikes(messages)
-    }).catch(err => {
+      // 异步加载点赞状态
+      this.loadLikeStates(messages)
+    }).catch(function(err) {
       console.error('加载留言失败:', err)
     })
   },
 
-  checkUserLikes(messages) {
-    const userId = app.globalData.getUserId()
-    const messageIds = messages.map(m => m._id)
+  loadLikeStates: function(messages) {
+    var self = this
+    var userId = app.globalData.getUserId()
 
-    if (messageIds.length === 0) return
+    if (messages.length === 0) return
 
-    // 逐条查询，避免 in 查询类型不匹配问题
-    const likeChecks = messageIds.map(id => {
+    var likePromises = messages.map(function(m) {
       return db.collection('treehole_likes')
-        .where({ messageId: id, userId: userId })
+        .where({
+          userId: userId,
+          messageId: m.msgId
+        })
         .count()
-        .then(res => ({ id, liked: res.total > 0 }))
-        .catch(() => ({ id, liked: false }))
+        .then(function(res) {
+          return { msgId: m.msgId, liked: res.total > 0 }
+        })
+        .catch(function() {
+          return { msgId: m.msgId, liked: false }
+        })
     })
 
-    Promise.all(likeChecks).then(results => {
-      const likedMap = {}
-      results.forEach(r => { likedMap[r.id] = r.liked })
+    Promise.all(likePromises).then(function(results) {
+      var likedMap = {}
+      results.forEach(function(r) { likedMap[r.msgId] = r.liked })
 
-      const updatedList = this.data.messageList.map(msg => {
-        if (likedMap[msg._id] !== undefined) {
-          return { ...msg, hasLiked: likedMap[msg._id] }
+      var list = self.data.messageList.map(function(msg) {
+        if (likedMap[msg.msgId] !== undefined) {
+          msg.hasLiked = likedMap[msg.msgId]
         }
         return msg
       })
-      this.setData({ messageList: updatedList })
+      self.setData({ messageList: list })
     })
   },
 
-  handleLike(e) {
-    const id = e.currentTarget.dataset.id
-    const hasLiked = e.currentTarget.dataset.liked === 'true'
-    const userId = app.globalData.getUserId()
+  handleLike: function(e) {
+    var msgId = e.currentTarget.dataset.id
+    var userId = app.globalData.getUserId()
+    var self = this
 
-    if (hasLiked) {
-      this.cancelLike(id, userId)
-    } else {
-      this.addLike(id, userId)
-    }
-  },
+    wx.showLoading({ title: '处理中...' })
 
-  addLike(messageId, userId) {
-    // 先检查是否已点赞
+    // 实时查数据库判断是否已点赞
     db.collection('treehole_likes')
-      .where({ messageId: messageId, userId: userId })
-      .count().then(countRes => {
-        if (countRes.total > 0) {
-          wx.showToast({ title: '你已点赞过', icon: 'none' })
-          return
-        }
-
-        return db.collection('treehole_likes').add({
-          data: { messageId: messageId, userId: userId, createTime: Date.now() }
-        }).then(() => {
-          return db.collection('treehole_messages').doc(messageId).update({
-            data: { likeCount: db.command.inc(1) }
-          })
-        }).then(() => {
-          this.updateLocalLike(messageId, true)
-          wx.showToast({ title: '点赞成功', icon: 'success' })
-        })
-      }).catch(err => {
-        console.error('点赞失败:', err)
-        wx.showToast({ title: '点赞失败', icon: 'none' })
+      .where({
+        userId: userId,
+        messageId: msgId
       })
-  },
-
-  cancelLike(messageId, userId) {
-    db.collection('treehole_likes')
-      .where({ messageId: messageId, userId: userId })
-      .get().then(res => {
+      .get()
+      .then(function(res) {
         if (res.data.length > 0) {
+          // 已点赞 -> 取消
           return db.collection('treehole_likes').doc(res.data[0]._id).remove()
+            .then(function() {
+              return db.collection('treehole_messages').doc(res.data[0].messageId).update({
+                data: { likeCount: db.command.inc(-1) }
+              })
+            })
+            .then(function() {
+              self.toggleLikeState(msgId, false, -1)
+              wx.hideLoading()
+              wx.showToast({ title: '已取消点赞', icon: 'success' })
+            })
+        } else {
+          // 未点赞 -> 添加
+          return db.collection('treehole_likes').add({
+            data: {
+              messageId: msgId,
+              userId: userId,
+              createTime: Date.now()
+            }
+          })
+          .then(function() {
+            return db.collection('treehole_messages').doc(msgId).update({
+              data: { likeCount: db.command.inc(1) }
+            })
+          })
+          .then(function() {
+            self.toggleLikeState(msgId, true, 1)
+            wx.hideLoading()
+            wx.showToast({ title: '点赞成功', icon: 'success' })
+          })
         }
-      }).then(() => {
-        return db.collection('treehole_messages').doc(messageId).update({
-          data: { likeCount: db.command.inc(-1) }
-        })
-      }).then(() => {
-        this.updateLocalLike(messageId, false)
-        wx.showToast({ title: '已取消点赞', icon: 'success' })
-      }).catch(err => {
-        console.error('取消点赞失败:', err)
-        wx.showToast({ title: '取消失败', icon: 'none' })
+      })
+      .catch(function(err) {
+        wx.hideLoading()
+        console.error('点赞操作失败:', err)
+        wx.showToast({ title: '操作失败', icon: 'none' })
       })
   },
 
-  updateLocalLike(messageId, hasLiked) {
-    const updatedList = this.data.messageList.map(msg => {
-      if (msg._id === messageId) {
-        return {
-          ...msg,
-          hasLiked: hasLiked,
-          likeCount: hasLiked ? msg.likeCount + 1 : msg.likeCount - 1
-        }
+  toggleLikeState: function(msgId, hasLiked, delta) {
+    var list = this.data.messageList.map(function(msg) {
+      if (msg.msgId === msgId) {
+        msg.hasLiked = hasLiked
+        msg.likeCount = msg.likeCount + delta
       }
       return msg
     })
-    this.setData({ messageList: updatedList })
+    this.setData({ messageList: list })
   },
 
-  handleFavorite(e) {
-    const id = e.currentTarget.dataset.id
-    const hasFavorited = e.currentTarget.dataset.favorited === 'true'
-    const userId = app.globalData.getUserId()
+  handleFavorite: function(e) {
+    var msgId = e.currentTarget.dataset.id
+    var userId = app.globalData.getUserId()
+    var self = this
 
-    if (hasFavorited) {
-      this.cancelFavorite(id, userId)
-    } else {
-      this.addFavorite(id, userId)
-    }
-  },
+    wx.showLoading({ title: '处理中...' })
 
-  addFavorite(messageId, userId) {
-    const permanentExpire = new Date('2099-12-31').getTime()
+    // 实时查数据库判断是否已收藏
+    db.collection('treehole_messages').doc(msgId).get()
+      .then(function(res) {
+        var item = res.data
+        var favoritedBy = item.favoritedBy || []
+        var alreadyFavorited = favoritedBy.indexOf(userId) > -1
 
-    db.collection('treehole_messages').doc(messageId).get().then(res => {
-      const currentFavoritedBy = res.data.favoritedBy || []
-      if (currentFavoritedBy.indexOf(userId) > -1) {
-        wx.showToast({ title: '你已收藏过', icon: 'none' })
-        return
-      }
-      const newFavoritedBy = currentFavoritedBy.concat([userId])
-
-      return db.collection('treehole_messages').doc(messageId).update({
-        data: { favoritedBy: newFavoritedBy, expireTime: permanentExpire }
+        if (alreadyFavorited) {
+          // 取消收藏
+          var newFavoritedBy = favoritedBy.filter(function(id) { return id !== userId })
+          return db.collection('treehole_messages').doc(msgId).update({
+            data: { favoritedBy: newFavoritedBy }
+          })
+          .then(function() {
+            self.toggleFavoriteState(msgId, false)
+            wx.hideLoading()
+            wx.showToast({ title: '已取消收藏', icon: 'success' })
+          })
+        } else {
+          // 添加收藏，永久保存
+          var permanentExpire = new Date('2099-12-31').getTime()
+          favoritedBy.push(userId)
+          return db.collection('treehole_messages').doc(msgId).update({
+            data: {
+              favoritedBy: favoritedBy,
+              expireTime: permanentExpire
+            }
+          })
+          .then(function() {
+            self.toggleFavoriteState(msgId, true)
+            wx.hideLoading()
+            wx.showToast({ title: '收藏成功，永久保存', icon: 'success' })
+          })
+        }
       })
-    }).then(() => {
-      this.updateLocalFavorite(messageId, true)
-      wx.showToast({ title: '收藏成功，永久保存', icon: 'success' })
-    }).catch(err => {
-      console.error('收藏失败:', err)
-      wx.showToast({ title: '收藏失败', icon: 'none' })
-    })
-  },
-
-  cancelFavorite(messageId, userId) {
-    db.collection('treehole_messages').doc(messageId).get().then(res => {
-      const currentFavoritedBy = res.data.favoritedBy || []
-      const newFavoritedBy = currentFavoritedBy.filter(function(id) { return id !== userId })
-
-      return db.collection('treehole_messages').doc(messageId).update({
-        data: { favoritedBy: newFavoritedBy }
+      .catch(function(err) {
+        wx.hideLoading()
+        console.error('收藏操作失败:', err)
+        wx.showToast({ title: '操作失败', icon: 'none' })
       })
-    }).then(() => {
-      this.updateLocalFavorite(messageId, false)
-      wx.showToast({ title: '已取消收藏', icon: 'success' })
-    }).catch(err => {
-      console.error('取消收藏失败:', err)
-      wx.showToast({ title: '取消失败', icon: 'none' })
-    })
   },
 
-  updateLocalFavorite(messageId, hasFavorited) {
-    const updatedList = this.data.messageList.map(msg => {
-      if (msg._id === messageId) {
-        return { ...msg, hasFavorited: hasFavorited, isExpired: false }
+  toggleFavoriteState: function(msgId, hasFavorited) {
+    var list = this.data.messageList.map(function(msg) {
+      if (msg.msgId === msgId) {
+        msg.hasFavorited = hasFavorited
+        msg.isExpired = false
       }
       return msg
     })
-    this.setData({ messageList: updatedList })
+    this.setData({ messageList: list })
   },
 
-  handleShare(e) {
-    const item = this.data.messageList[e.currentTarget.dataset.index]
+  handleShare: function(e) {
+    var item = this.data.messageList[e.currentTarget.dataset.index]
     if (!item) return
 
     wx.showShareMenu({ withShareTicket: true })
@@ -236,37 +244,37 @@ Page({
     })
   },
 
-  loadMore() {
+  loadMore: function() {
     if (!this.data.hasMore) return
     this.loadMessages()
   },
 
-  getRemainingText(expireTime, favoritedBy, userId) {
+  getRemainingText: function(expireTime, favoritedBy, userId) {
     if (!expireTime) return ''
     if (favoritedBy && favoritedBy.indexOf(userId) > -1) return '永久保存'
-    const diff = expireTime - Date.now()
+    var diff = expireTime - Date.now()
     if (diff <= 0) return '已过期'
     if (diff < 3600000) return '剩余' + Math.ceil(diff / 60000) + '分钟'
     if (diff < 86400000) return '剩余' + Math.ceil(diff / 3600000) + '小时'
     return '剩余' + Math.ceil(diff / 86400000) + '天'
   },
 
-  formatTime(timestamp) {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
+  formatTime: function(timestamp) {
+    var date = new Date(timestamp)
+    var now = new Date()
+    var diff = now.getTime() - date.getTime()
 
     if (diff < 60000) return '刚刚'
     if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
     if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
     if (diff < 604800000) return Math.floor(diff / 86400000) + '天前'
 
-    const month = date.getMonth() + 1
-    const day = date.getDate()
+    var month = date.getMonth() + 1
+    var day = date.getDate()
     return month + '月' + day + '日'
   },
 
-  onShareAppMessage() {
+  onShareAppMessage: function() {
     return {
       title: '校园树洞 - 分享你的心声，倾听他人故事',
       path: '/pages/index/index'
