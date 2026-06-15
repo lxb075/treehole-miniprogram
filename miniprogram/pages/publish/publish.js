@@ -72,9 +72,7 @@ Page({
       wx.hideLoading()
       wx.showToast({ title: '发布成功', icon: 'success' })
       this.setData({ content: '' })
-      setTimeout(() => {
-        wx.switchTab({ url: '/pages/index/index' })
-      }, 1500)
+      wx.switchTab({ url: '/pages/index/index' })
     }).catch(err => {
       wx.hideLoading()
       console.error('发布失败:', err)
