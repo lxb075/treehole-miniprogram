@@ -97,7 +97,10 @@ Page({
   addLike(messageId, userId) {
     // 先检查是否已点赞过，防止重复点赞
     db.collection('treehole_likes')
-      .where({ messageId, userId })
+      .where({
+        messageId: db.command.eq(messageId),
+        userId: db.command.eq(userId)
+      })
       .count().then(countRes => {
         if (countRes.total > 0) {
           wx.showToast({ title: '你已点赞过', icon: 'none' })
@@ -132,7 +135,10 @@ Page({
 
   cancelLike(messageId, userId) {
     db.collection('treehole_likes')
-      .where({ messageId, userId })
+      .where({
+        messageId: db.command.eq(messageId),
+        userId: db.command.eq(userId)
+      })
       .get().then(res => {
         if (res.data.length > 0) {
           return db.collection('treehole_likes').doc(res.data[0]._id).remove()
@@ -184,13 +190,21 @@ Page({
     // 收藏时延长过期时间到 2099 年，实现永久保存
     const permanentExpire = new Date('2099-12-31').getTime()
 
+    // 先获取当前数据，处理 favoritedBy 字段不存在的情况
     db.collection('treehole_messages')
       .doc(messageId)
-      .update({
-        data: {
-          favoritedBy: db.command.push(userId),
-          expireTime: permanentExpire
-        }
+      .get().then(res => {
+        const currentFavoritedBy = res.data.favoritedBy || []
+        const newFavoritedBy = [...currentFavoritedBy, userId]
+
+        return db.collection('treehole_messages')
+          .doc(messageId)
+          .update({
+            data: {
+              favoritedBy: newFavoritedBy,
+              expireTime: permanentExpire
+            }
+          })
       }).then(() => {
         this.updateLocalFavorite(messageId, true)
         wx.showToast({ title: '收藏成功，永久保存', icon: 'success' })
