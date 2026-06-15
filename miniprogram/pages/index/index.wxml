@@ -19,7 +19,7 @@
       <view
         wx:for="{{messageList}}"
         wx:key="_id"
-        class="message-card {{item.isExpired ? 'expired' : ''}}"
+        class="message-card {{item.isExpired ? 'expired' : ''}} {{item.hasFavorited ? 'favorited' : ''}}"
       >
         <view class="message-header">
           <view class="avatar">{{item.anonymousName.charAt(0)}}</view>
@@ -27,7 +27,7 @@
             <text class="anonymous-name">{{item.anonymousName}}</text>
             <view class="time-row">
               <text class="create-time">{{formatTime(item.createTime)}}</text>
-              <text class="expire-time" wx:if="{{item.remainingText}}">⏳ {{item.remainingText}}</text>
+              <text class="expire-time" wx:if="{{item.remainingText}}"> {{item.remainingText}}</text>
             </view>
           </view>
         </view>
@@ -43,6 +43,14 @@
           >
             <text class="like-icon">{{item.hasLiked ? '❤️' : ''}}</text>
             <text class="like-count">{{item.likeCount}}</text>
+          </view>
+          <view
+            class="favorite-btn {{item.hasFavorited ? 'favorited' : ''}}"
+            bindtap="handleFavorite"
+            data-id="{{item._id}}"
+            data-favorited="{{item.hasFavorited}}"
+          >
+            <text class="favorite-icon">{{item.hasFavorited ? '⭐' : '☆'}}</text>
           </view>
           <view class="share-btn" bindtap="handleShare" data-index="{{index}}">
             <text class="share-icon">📤</text>

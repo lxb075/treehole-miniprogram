@@ -22,7 +22,7 @@
       <view class="info-row" bindtap="toggleExpirePicker">
         <text class="info-label">留言有效期</text>
         <view class="expire-select">
-          <text>{{expireHours}}小时</text>
+          <text>{{expireHours >= 168 ? (expireHours / 24) + '天' : expireHours + '小时'}}</text>
           <text class="arrow">▼</text>
         </view>
       </view>

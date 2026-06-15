@@ -77,6 +77,11 @@
   border: 2rpx dashed #ccc;
 }
 
+.message-card.favorited {
+  border: 2rpx solid #ffd700;
+  background: #fffef5;
+}
+
 .message-header {
   display: flex;
   align-items: center;
@@ -164,6 +169,24 @@
 .like-count {
   font-size: 26rpx;
   color: #666;
+}
+
+.favorite-btn {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 20rpx;
+  background: #fff;
+  border-radius: 30rpx;
+  border: 1rpx solid #eee;
+}
+
+.favorite-btn.favorited {
+  border-color: #ffd700;
+  background: #fffef0;
+}
+
+.favorite-icon {
+  font-size: 28rpx;
 }
 
 .share-btn {

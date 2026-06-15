@@ -5,13 +5,13 @@ Page({
   data: {
     content: '',
     anonymousName: '',
-    expireHours: 24,
+    expireHours: 168,
     expireOptions: [
-      { label: '6小时', value: 6 },
-      { label: '12小时', value: 12 },
-      { label: '24小时', value: 24 },
-      { label: '48小时', value: 48 },
-      { label: '72小时', value: 72 }
+      { label: '1天', value: 24 },
+      { label: '3天', value: 72 },
+      { label: '7天', value: 168 },
+      { label: '15天', value: 360 },
+      { label: '30天', value: 720 }
     ],
     showExpirePicker: false
   },

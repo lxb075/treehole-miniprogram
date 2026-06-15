@@ -20,10 +20,14 @@ Page({
   loadMessages() {
     const { pageSize, lastTime } = this.data
     const now = Date.now()
+    const userId = app.globalData.getUserId()
+
+    // 查询：未过期的留言 + 当前用户收藏的留言（永久保存）
     let query = db.collection('treehole_messages')
-      .where({
-        expireTime: db.command.gt(now)
-      })
+      .where(db.command.or([
+        { expireTime: db.command.gt(now) },
+        { favoritedBy: db.command.in([userId]) }
+      ]))
       .orderBy('createTime', 'desc')
       .limit(pageSize)
 
@@ -35,9 +39,10 @@ Page({
       const messages = res.data.map(item => ({
         ...item,
         hasLiked: false,
+        hasFavorited: (item.favoritedBy || []).includes(userId),
         likeCount: item.likeCount || 0,
-        isExpired: item.expireTime && item.expireTime <= now,
-        remainingText: this.getRemainingText(item.expireTime)
+        isExpired: item.expireTime && item.expireTime <= now && !(item.favoritedBy || []).includes(userId),
+        remainingText: this.getRemainingText(item.expireTime, item.favoritedBy, userId)
       }))
 
       this.checkUserLikes(messages)
@@ -153,6 +158,68 @@ Page({
     this.setData({ messageList: updatedList })
   },
 
+  handleFavorite(e) {
+    const id = e.currentTarget.dataset.id
+    const hasFavorited = e.currentTarget.dataset.favorited === 'true'
+    const userId = app.globalData.getUserId()
+
+    if (hasFavorited) {
+      this.cancelFavorite(id, userId)
+    } else {
+      this.addFavorite(id, userId)
+    }
+  },
+
+  addFavorite(messageId, userId) {
+    // 收藏时延长过期时间到 2099 年，实现永久保存
+    const permanentExpire = new Date('2099-12-31').getTime()
+
+    db.collection('treehole_messages')
+      .doc(messageId)
+      .update({
+        data: {
+          favoritedBy: db.command.push(userId),
+          expireTime: permanentExpire
+        }
+      }).then(() => {
+        this.updateLocalFavorite(messageId, true)
+        wx.showToast({ title: '收藏成功，永久保存', icon: 'success' })
+      }).catch(err => {
+        console.error('收藏失败:', err)
+        wx.showToast({ title: '收藏失败', icon: 'none' })
+      })
+  },
+
+  cancelFavorite(messageId, userId) {
+    db.collection('treehole_messages')
+      .doc(messageId)
+      .update({
+        data: {
+          favoritedBy: db.command.pull(userId)
+        }
+      }).then(() => {
+        this.updateLocalFavorite(messageId, false)
+        wx.showToast({ title: '已取消收藏', icon: 'success' })
+      }).catch(err => {
+        console.error('取消收藏失败:', err)
+        wx.showToast({ title: '取消失败', icon: 'none' })
+      })
+  },
+
+  updateLocalFavorite(messageId, hasFavorited) {
+    const updatedList = this.data.messageList.map(msg => {
+      if (msg._id === messageId) {
+        return {
+          ...msg,
+          hasFavorited,
+          isExpired: false
+        }
+      }
+      return msg
+    })
+    this.setData({ messageList: updatedList })
+  },
+
   handleShare(e) {
     const item = this.data.messageList[e.currentTarget.dataset.index]
     if (!item) return
@@ -172,8 +239,10 @@ Page({
     this.loadMessages()
   },
 
-  getRemainingText(expireTime) {
+  getRemainingText(expireTime, favoritedBy, userId) {
     if (!expireTime) return ''
+    // 被当前用户收藏的留言永久保存
+    if (favoritedBy && favoritedBy.includes(userId)) return '永久保存'
     const diff = expireTime - Date.now()
     if (diff <= 0) return '已过期'
     if (diff < 3600000) return `剩余${Math.ceil(diff / 60000)}分钟`
