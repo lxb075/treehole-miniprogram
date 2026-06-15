@@ -74,7 +74,7 @@ Page({
         messageId: db.command.in(messageIds)
       }).get().then(res => {
         const likedIds = new Set(res.data.map(item => item.messageId))
-        const updatedList = this.data.messageList.map(msg => ({
+        const updatedList = messages.map(msg => ({
           ...msg,
           hasLiked: likedIds.has(msg._id)
         }))
@@ -95,29 +95,39 @@ Page({
   },
 
   addLike(messageId, userId) {
-    const newLike = {
-      messageId,
-      userId,
-      createTime: Date.now()
-    }
+    // 先检查是否已点赞过，防止重复点赞
+    db.collection('treehole_likes')
+      .where({ messageId, userId })
+      .count().then(countRes => {
+        if (countRes.total > 0) {
+          wx.showToast({ title: '你已点赞过', icon: 'none' })
+          return
+        }
 
-    db.collection('treehole_likes').add({
-      data: newLike
-    }).then(() => {
-      return db.collection('treehole_messages')
-        .doc(messageId)
-        .update({
-          data: {
-            likeCount: db.command.inc(1)
-          }
+        const newLike = {
+          messageId,
+          userId,
+          createTime: Date.now()
+        }
+
+        return db.collection('treehole_likes').add({
+          data: newLike
+        }).then(() => {
+          return db.collection('treehole_messages')
+            .doc(messageId)
+            .update({
+              data: {
+                likeCount: db.command.inc(1)
+              }
+            })
+        }).then(() => {
+          this.updateLocalLike(messageId, true)
+          wx.showToast({ title: '点赞成功', icon: 'success' })
         })
-    }).then(() => {
-      this.updateLocalLike(messageId, true)
-      wx.showToast({ title: '点赞成功', icon: 'success' })
-    }).catch(err => {
-      console.error('点赞失败:', err)
-      wx.showToast({ title: '点赞失败', icon: 'none' })
-    })
+      }).catch(err => {
+        console.error('点赞失败:', err)
+        wx.showToast({ title: '点赞失败', icon: 'none' })
+      })
   },
 
   cancelLike(messageId, userId) {
