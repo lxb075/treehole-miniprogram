@@ -233,15 +233,20 @@ Page({
     this.setData({ messageList: list })
   },
 
-  handleShare: function(e) {
-    var item = this.data.messageList[e.currentTarget.dataset.index]
-    if (!item) return
-
-    wx.showShareMenu({ withShareTicket: true })
-    wx.shareAppMessage({
-      title: item.anonymousName + ' 说：' + item.content.substring(0, 20),
+  onShareAppMessage: function(e) {
+    if (e.target && e.target.dataset && e.target.dataset.index !== undefined) {
+      var item = this.data.messageList[e.target.dataset.index]
+      if (item) {
+        return {
+          title: item.anonymousName + ' 说：' + item.content.substring(0, 30),
+          path: '/pages/index/index'
+        }
+      }
+    }
+    return {
+      title: '校园树洞 - 分享你的心声，倾听他人故事',
       path: '/pages/index/index'
-    })
+    }
   },
 
   loadMore: function() {
@@ -272,12 +277,5 @@ Page({
     var month = date.getMonth() + 1
     var day = date.getDate()
     return month + '月' + day + '日'
-  },
-
-  onShareAppMessage: function() {
-    return {
-      title: '校园树洞 - 分享你的心声，倾听他人故事',
-      path: '/pages/index/index'
-    }
   }
 })

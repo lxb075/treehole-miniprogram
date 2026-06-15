@@ -52,9 +52,9 @@
           >
             <text class="favorite-icon">{{item.hasFavorited ? '⭐' : '☆'}}</text>
           </view>
-          <view class="share-btn" bindtap="handleShare" data-index="{{index}}">
+          <button class="share-btn" open-type="share" data-index="{{index}}">
             <text class="share-icon">📤</text>
-          </view>
+          </button>
         </view>
       </view>
     </scroll-view>
