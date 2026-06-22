@@ -61,7 +61,15 @@ Page({
       timeout
     ])
       .then(res => {
-        const ids = (res.data || []).map(item => item.messageId)
+        // 去重:同一 messageId 即使云端有重复记录,这里也只保留一条
+        const seen = new Set()
+        const ids = []
+        ;(res.data || []).forEach(item => {
+          if (!seen.has(item.messageId)) {
+            seen.add(item.messageId)
+            ids.push(item.messageId)
+          }
+        })
         if (ids.length === 0) {
           this.setData({ messageList: [], loading: false })
           return Promise.resolve()
@@ -140,7 +148,15 @@ Page({
       timeout
     ])
       .then(res => {
-        const ids = (res.data || []).map(item => item.messageId)
+        // 去重:同一 messageId 即使云端有重复记录,这里也只保留一条
+        const seen = new Set()
+        const ids = []
+        ;(res.data || []).forEach(item => {
+          if (!seen.has(item.messageId)) {
+            seen.add(item.messageId)
+            ids.push(item.messageId)
+          }
+        })
         if (ids.length === 0) {
           this.setData({ messageList: [], loading: false })
           return Promise.resolve()
@@ -274,12 +290,22 @@ Page({
   },
 
   // 收藏:乐观更新架构
+  // 状态读取用 this.data.messageList,不再读 e.currentTarget.dataset
+  // (dataset 是 WXML 渲染快照,连点时可能拿到旧值,导致"再点一下"看起来没翻)
   handleFavorite(e) {
     const id = e.currentTarget.dataset.id
-    const hasFavorited = e.currentTarget.dataset.favorited === 'true'
-    const userId = app.globalData.getUserId()
+    if (this.data._favLock) return
+    this.setData({ _favLock: true })
 
-    // 1. 立即更新 UI
+    // 1. 读取当前真实状态
+    const msg = this.data.messageList.find(m => m._id === id)
+    if (!msg) {
+      this.setData({ _favLock: false })
+      return
+    }
+    const hasFavorited = !!msg.hasFavorited
+
+    // 2. 立即更新 UI
     this.updateLocalFav(id, !hasFavorited)
     if (!hasFavorited) {
       wx.showToast({ title: '已收藏到心里', icon: 'none', duration: 1000 })
@@ -291,17 +317,29 @@ Page({
       }
     }
 
-    // 2. 异步云调用
+    // 3. 异步云调用
+    const userId = app.globalData.getUserId()
     const op = hasFavorited
       ? this.removeFavRemote(id, userId)
       : this.addFavRemote(id, userId)
     op.catch(err => console.warn('收藏云端同步失败(不影响UI):', err))
+
+    // 4. 释放锁
+    setTimeout(() => this.setData({ _favLock: false }), 300)
   },
 
   addFavRemote(messageId, userId) {
-    return db.collection('treehole_favorites').add({
-      data: { messageId, userId, createTime: Date.now() }
-    })
+    // 幂等:已存在则不重复 add,避免云端出现重复记录导致收藏夹出现同一条留言多次
+    return db.collection('treehole_favorites')
+      .where({ messageId, userId })
+      .limit(1)
+      .get()
+      .then(res => {
+        if (res.data && res.data.length > 0) return null
+        return db.collection('treehole_favorites').add({
+          data: { messageId, userId, createTime: Date.now() }
+        })
+      })
   },
 
   removeFavRemote(messageId, userId) {

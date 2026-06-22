@@ -162,15 +162,22 @@ Page({
   // - UI 立即变(心变红、数字 +1/-1)
   // - 云调用异步发送,失败不阻塞、不回滚
   // - 这样即使云开发 SDK 内部 timeout,交互依然流畅
+  // - 状态读取用 this.data.messageList,不再读 e.currentTarget.dataset
+  //   (dataset 是 WXML 渲染快照,连点时可能拿到旧值,导致点一次状态没翻)
   handleLike(e) {
     const id = e.currentTarget.dataset.id
-    const hasLiked = e.currentTarget.dataset.liked === 'true'
-    const userId = app.globalData.getUserId()
-
     if (this.data.likeLock[id]) return
     this.setData({ [`likeLock.${id}`]: true })
 
-    // 1. 立即更新 UI(乐观)
+    // 1. 读取当前真实状态(以 data 为准,避免 dataset 滞后)
+    const msg = this.data.messageList.find(m => m._id === id)
+    if (!msg) {
+      this.setData({ [`likeLock.${id}`]: false })
+      return
+    }
+    const hasLiked = !!msg.hasLiked
+
+    // 2. 立即更新 UI(乐观)
     if (hasLiked) {
       this.updateLocalLike(id, false, true)
     } else {
@@ -183,13 +190,14 @@ Page({
       duration: 1000
     })
 
-    // 2. 异步发云调用(fire-and-forget,失败不阻塞 UI)
+    // 3. 异步发云调用(fire-and-forget,失败不阻塞 UI)
+    const userId = app.globalData.getUserId()
     const op = hasLiked
       ? this.cancelLikeRemote(id, userId)
       : this.addLikeRemote(id, userId)
     op.catch(err => console.warn('点赞云端同步失败(不影响UI):', err))
 
-    // 3. 300ms 后释放锁(防快速连点,云端慢慢同步)
+    // 4. 300ms 后释放锁(防快速连点,云端慢慢同步)
     setTimeout(() => {
       this.setData({ [`likeLock.${id}`]: false })
     }, 300)
@@ -236,15 +244,22 @@ Page({
 
   // ==================== 收藏 ====================
   // 同样采用乐观更新架构
+  // 状态读取用 this.data.messageList,不再读 e.currentTarget.dataset
+  // (dataset 是 WXML 渲染快照,连点时可能拿到旧值,导致"再点一下"看起来没翻)
   handleFavorite(e) {
     const id = e.currentTarget.dataset.id
-    const hasFavorited = e.currentTarget.dataset.favorited === 'true'
-    const userId = app.globalData.getUserId()
-
     if (this.data.favLock[id]) return
     this.setData({ [`favLock.${id}`]: true })
 
-    // 1. 立即更新 UI
+    // 1. 读取当前真实状态
+    const msg = this.data.messageList.find(m => m._id === id)
+    if (!msg) {
+      this.setData({ [`favLock.${id}`]: false })
+      return
+    }
+    const hasFavorited = !!msg.hasFavorited
+
+    // 2. 立即更新 UI
     this.updateLocalFav(id, !hasFavorited)
     this.setData({ [`userTouched.${id}`]: true })
     wx.showToast({
@@ -253,22 +268,31 @@ Page({
       duration: 1000
     })
 
-    // 2. 异步发云调用
+    // 3. 异步发云调用
+    const userId = app.globalData.getUserId()
     const op = hasFavorited
       ? this.removeFavRemote(id, userId)
       : this.addFavRemote(id, userId)
     op.catch(err => console.warn('收藏云端同步失败(不影响UI):', err))
 
-    // 3. 释放锁
+    // 4. 释放锁
     setTimeout(() => {
       this.setData({ [`favLock.${id}`]: false })
     }, 300)
   },
 
   addFavRemote(messageId, userId) {
-    return db.collection('treehole_favorites').add({
-      data: { messageId, userId, createTime: Date.now() }
-    })
+    // 幂等:先查一次,没有记录才 add,避免快速连点/网络重试导致云端重复写入
+    return db.collection('treehole_favorites')
+      .where({ messageId, userId })
+      .limit(1)
+      .get()
+      .then(res => {
+        if (res.data && res.data.length > 0) return null
+        return db.collection('treehole_favorites').add({
+          data: { messageId, userId, createTime: Date.now() }
+        })
+      })
   },
 
   removeFavRemote(messageId, userId) {
