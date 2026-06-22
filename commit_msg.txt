@@ -1,7 +1,15 @@
-feat: 在收藏/发布/详情页添加"回我的"浮动按钮
+fix: 修复点赞/收藏取消失败及点赞数不变化
 
-- 三个页面右下角加圆形浮动按钮(FAB),点击 switchTab 到 my 页面
-- 按钮样式:暖色渐变 + 阴影,按压有缩放反馈
-- 文案"🌷 回我的",统一交互入口
-- 不影响各页面原有布局,使用 position: fixed
-- 覆盖 pages/favorites / pages/publish / pages/detail
+- cancelLike Promise 链 return bug: db.update() resolve 值为 undefined,
+  下一个 then 拿到的 removedCount 是 undefined/0,本地 likeCount 永远不 -1
+  → 显式 .then(() => removedCount) 透传
+
+- addLike 孤儿记录处理:之前如果数据库已有该用户的点赞记录(清缓存后残留),
+  走"什么都不做"分支,导致 UI 显示未点赞但点击后数字不变
+  → 区分 hadLikedBefore:UI 未点赞但数据库有记录时,清理孤儿后重新 add +1
+
+- checkUserStates 异步覆盖:用户操作完后 1~2s,checkUserStates 异步回调
+  重新用数据库结果覆盖,导致刚取消的状态被改回
+  → 新增 userTouched 标记,checkUserStates 跳过用户操作过的条目
+
+- 同步修复 detail.js 的 addLike,保持与首页一致

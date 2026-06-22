@@ -13,6 +13,9 @@ Page({
     // 防止快速重复点击的锁
     likeLock: {},
     favLock: {},
+    // 用户在本次会话中操作过的 messageId,checkUserStates 会跳过这些
+    // 防止异步回调把用户刚刚的"取消"再覆盖回去
+    userTouched: {},
     // 当前用户信息(q版动物头)
     currentUser: null
   },
@@ -138,11 +141,16 @@ Page({
     ]).then(([likesRes, favRes]) => {
       const likedIds = new Set((likesRes.data || []).map(item => item.messageId))
       const favIds = new Set((favRes.data || []).map(item => item.messageId))
-      const updatedList = this.data.messageList.map(msg => ({
-        ...msg,
-        hasLiked: likedIds.has(msg._id),
-        hasFavorited: favIds.has(msg._id)
-      }))
+      const touched = this.data.userTouched || {}
+      const updatedList = this.data.messageList.map(msg => {
+        // 用户在本次会话中已经手动操作过这条,不要用数据库结果覆盖
+        if (touched[msg._id]) return msg
+        return {
+          ...msg,
+          hasLiked: likedIds.has(msg._id),
+          hasFavorited: favIds.has(msg._id)
+        }
+      })
       this.setData({ messageList: updatedList })
     }).catch(err => {
       console.warn('查询状态失败:', err)
@@ -164,18 +172,34 @@ Page({
     if (hasLiked) {
       this.cancelLike(id, userId)
     } else {
-      this.addLike(id, userId)
+      this.addLike(id, userId, false)
     }
   },
 
-  addLike(messageId, userId) {
+  addLike(messageId, userId, hadLikedBefore) {
     db.collection('treehole_likes')
       .where({ messageId, userId })
       .get()
       .then(res => {
-        // 已有记录:不再 add 也不增加 likeCount,只标记本地状态
         if (res.data.length > 0) {
-          return { added: false, count: 0 }
+          // 两种情况:
+          // 1. hadLikedBefore=true:正常重复点击,什么都不做(幂等)
+          // 2. hadLikedBefore=false:数据库有记录但 UI 是未点赞
+          //   → 多半是孤儿记录(清缓存/旧 userId 残留),清理后重新 +1
+          if (hadLikedBefore) {
+            return { added: false, count: 0 }
+          }
+          const removeOps = res.data.map(item =>
+            db.collection('treehole_likes').doc(item._id).remove()
+          )
+          return Promise.all(removeOps).then(() =>
+            db.collection('treehole_likes')
+              .add({ data: { messageId, userId, createTime: Date.now() } })
+              .then(() => db.collection('treehole_messages')
+                .doc(messageId)
+                .update({ data: { likeCount: db.command.inc(1) } }))
+              .then(() => ({ added: true, count: 1 }))
+          )
         }
         return db.collection('treehole_likes')
           .add({ data: { messageId, userId, createTime: Date.now() } })
@@ -187,6 +211,8 @@ Page({
       .then(result => {
         // 统一只在最末尾更新一次本地状态
         this.updateLocalLike(messageId, true, result.added)
+        // 标记用户操作过,防止 checkUserStates 异步回调覆盖
+        this.setData({ [`userTouched.${messageId}`]: true })
         wx.showToast({ title: '送出一个小心心', icon: 'none', duration: 1200 })
       })
       .catch(err => {
@@ -210,12 +236,15 @@ Page({
           return db.collection('treehole_messages')
             .doc(messageId)
             .update({ data: { likeCount: db.command.inc(-removedCount) } })
+            // 关键:把 removedCount 透传给下一个 then,否则下一个 then 拿到的是 undefined
+            .then(() => removedCount)
         }
         return 0
       })
       .then(removedCount => {
         // 统一只在最末尾更新一次本地状态
         this.updateLocalLike(messageId, false, removedCount > 0)
+        this.setData({ [`userTouched.${messageId}`]: true })
         wx.showToast({ title: '已收回小心心', icon: 'none', duration: 1200 })
       })
       .catch(err => {
@@ -266,6 +295,7 @@ Page({
       .then(res => {
         if (res.data.length > 0) {
           this.updateLocalFav(messageId, true)
+          this.setData({ [`userTouched.${messageId}`]: true })
           return Promise.resolve()
         }
         return db.collection('treehole_favorites').add({
@@ -274,6 +304,8 @@ Page({
       })
       .then(() => {
         this.updateLocalFav(messageId, true)
+        // 标记用户操作过,防止 checkUserStates 异步回调覆盖
+        this.setData({ [`userTouched.${messageId}`]: true })
         wx.showToast({ title: '已收藏到心里', icon: 'none', duration: 1200 })
       })
       .catch(err => {
@@ -294,6 +326,7 @@ Page({
       })
       .then(() => {
         this.updateLocalFav(messageId, false)
+        this.setData({ [`userTouched.${messageId}`]: true })
         wx.showToast({ title: '已从收藏移除', icon: 'none', duration: 1200 })
       })
       .catch(err => {

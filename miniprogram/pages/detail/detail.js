@@ -94,15 +94,27 @@ Page({
     if (message.hasLiked) {
       this.cancelLike(message._id, userId)
     } else {
-      this.addLike(message._id, userId)
+      this.addLike(message._id, userId, false)
     }
   },
 
-  addLike(messageId, userId) {
+  addLike(messageId, userId, hadLikedBefore) {
     db.collection('treehole_likes').where({ messageId, userId }).get()
       .then(res => {
-        // 已有记录:不再 add 也不增加 likeCount
-        if (res.data.length > 0) return { added: false }
+        if (res.data.length > 0) {
+          // 孤儿记录(UI 未点赞但数据库有)→ 清理后重新 +1
+          if (hadLikedBefore) return { added: false }
+          const removeOps = res.data.map(i =>
+            db.collection('treehole_likes').doc(i._id).remove()
+          )
+          return Promise.all(removeOps).then(() =>
+            db.collection('treehole_likes').add({
+              data: { messageId, userId, createTime: Date.now() }
+            }).then(() => db.collection('treehole_messages').doc(messageId)
+              .update({ data: { likeCount: db.command.inc(1) } }))
+              .then(() => ({ added: true }))
+          )
+        }
         return db.collection('treehole_likes').add({
           data: { messageId, userId, createTime: Date.now() }
         }).then(() => db.collection('treehole_messages').doc(messageId)
@@ -110,7 +122,6 @@ Page({
           .then(() => ({ added: true }))
       })
       .then(result => {
-        // 统一只在最末尾更新一次本地状态
         this.setData({
           'message.hasLiked': true,
           'message.likeCount': result.added
