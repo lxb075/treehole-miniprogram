@@ -81,7 +81,8 @@ Page({
                   hasLiked: false,
                   hasFavorited: true,
                   likeCount: item.likeCount || 0,
-                  animal: getAnimalAvatar(seed)
+                  animal: getAnimalAvatar(seed),
+                  createTimeText: this.formatTime(item.createTime)
                 }
               })
             this.setData({ messageList: list, loading: false })
@@ -114,7 +115,9 @@ Page({
             hasFavorited: false,
             likeCount: item.likeCount || 0,
             animal: getAnimalAvatar(seed),
-            canDelete: true
+            canDelete: true,
+            // 预处理时间字符串,避免 WXML 无法直接调用 Page 方法
+            createTimeText: this.formatTime(item.createTime)
           }
         })
         this.setData({ messageList: list, loading: false })
@@ -157,7 +160,8 @@ Page({
                   hasLiked: true,
                   hasFavorited: false,
                   likeCount: item.likeCount || 0,
-                  animal: getAnimalAvatar(seed)
+                  animal: getAnimalAvatar(seed),
+                  createTimeText: this.formatTime(item.createTime)
                 }
               })
             this.setData({ messageList: list, loading: false })
@@ -334,10 +338,13 @@ Page({
   },
 
   formatTime(timestamp) {
-    if (!timestamp) return ''
+    if (!timestamp) return '时间未知'
     const date = new Date(timestamp)
+    const t = date.getTime()
+    if (isNaN(t)) return '时间未知'
     const now = new Date()
-    const diff = now.getTime() - date.getTime()
+    const diff = now.getTime() - t
+    if (diff < 0) return '刚刚'
     if (diff < 60000) return '刚刚'
     if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`

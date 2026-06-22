@@ -77,7 +77,9 @@ Page({
             hasLiked: false,
             hasFavorited: false,
             likeCount: item.likeCount || 0,
-            animal
+            animal,
+            // 预处理时间字符串,避免 WXML 无法直接调用 Page 方法
+            createTimeText: this.formatTime(item.createTime)
           }
         })
 
@@ -326,16 +328,17 @@ Page({
 
   // 格式化为本地时间字符串(不依赖 new Date,直接格式化 timestamp)
   formatTime(timestamp) {
-    if (!timestamp) return ''
+    if (!timestamp) return '时间未知'
     const date = new Date(timestamp)
+    const t = date.getTime()
+    if (isNaN(t)) return '时间未知'
     const now = new Date()
-    const diff = now.getTime() - date.getTime()
-
+    const diff = now.getTime() - t
+    if (diff < 0) return '刚刚'
     if (diff < 60000) return '刚刚'
     if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
     if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
-
     const month = date.getMonth() + 1
     const day = date.getDate()
     return `${month}月${day}日`

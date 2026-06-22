@@ -28,7 +28,7 @@
         </view>
         <view class="user-info">
           <text class="anonymous-name">{{message.anonymousName}}</text>
-          <text class="create-time">{{formatTime(message.createTime)}}</text>
+          <text class="create-time">{{message.createTimeText}}</text>
         </view>
       </view>
 

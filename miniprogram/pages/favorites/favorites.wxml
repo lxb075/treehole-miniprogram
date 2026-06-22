@@ -42,7 +42,7 @@
           </view>
           <view class="user-info">
             <text class="anonymous-name">{{item.anonymousName}}</text>
-            <text class="create-time">{{formatTime(item.createTime)}}</text>
+            <text class="create-time">{{item.createTimeText}}</text>
           </view>
           <view wx:if="{{type === 'posted'}}" class="delete-hint">
             <text>长按删除</text>

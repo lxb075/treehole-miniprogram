@@ -1,0 +1,11 @@
+fix: 修复 WXML 无法调用 Page 方法导致时间显示异常
+
+- 修复历史/收藏/详情页时间显示问题
+  - WXML 中 {{formatTime(...)}} 不会真正执行 Page 方法,导致显示原始数据
+  - 改为在 JS 加载数据时预处理 createTimeText,WXML 直接显示
+  - 覆盖 index / detail / favorites 三个页面
+- 增强 formatTime 健壮性
+  - 处理 NaN / undefined / 异常时间戳,显示"时间未知"
+- 优化 q 版动物头像匹配
+  - 优先按昵称中关键词(中文+英文)匹配
+  - 最长关键词优先,避免短词抢匹配
