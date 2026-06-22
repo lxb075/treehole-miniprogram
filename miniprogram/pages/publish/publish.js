@@ -133,6 +133,11 @@ Page({
     })
   },
 
+  // 浮动按钮:返回"我的"
+  goMy() {
+    wx.switchTab({ url: '/pages/my/my' })
+  },
+
   // ==================== 发布 ====================
   handlePublish() {
     if (this.data.isSubmitting) return

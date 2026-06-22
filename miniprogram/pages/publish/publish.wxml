@@ -76,4 +76,10 @@
       <text wx:else>放进中...</text>
     </view>
   </view>
+
+  <!-- 浮动按钮:返回"我的" -->
+  <view class="fab-back-my" bindtap="goMy" hover-class="fab-back-my-hover">
+    <text class="fab-icon">🌷</text>
+    <text class="fab-text">回我的</text>
+  </view>
 </view>

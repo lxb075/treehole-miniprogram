@@ -27,6 +27,11 @@ Page({
     }})
   },
 
+  // 浮动按钮:返回"我的"
+  goMy() {
+    wx.switchTab({ url: '/pages/my/my' })
+  },
+
   loadDetail() {
     const id = this.data.messageId
     if (!id) {

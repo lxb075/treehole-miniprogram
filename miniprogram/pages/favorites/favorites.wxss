@@ -217,3 +217,37 @@
   color: #B8860B;
   font-weight: bold;
 }
+
+/* ============== 浮动按钮:返回我的 ============== */
+.fab-back-my {
+  position: fixed;
+  right: 32rpx;
+  bottom: 60rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFB997 0%, #FF8C61 100%);
+  box-shadow: 0 8rpx 20rpx rgba(255, 140, 97, 0.35);
+  z-index: 999;
+}
+
+.fab-back-my-hover {
+  transform: scale(0.92);
+  box-shadow: 0 4rpx 10rpx rgba(255, 140, 97, 0.25);
+}
+
+.fab-back-my .fab-icon {
+  font-size: 40rpx;
+  line-height: 1;
+  margin-bottom: 4rpx;
+}
+
+.fab-back-my .fab-text {
+  font-size: 20rpx;
+  color: #FFFFFF;
+  letter-spacing: 1rpx;
+}

@@ -219,6 +219,11 @@ Page({
     wx.navigateTo({ url: '/pages/detail/detail?id=' + id })
   },
 
+  // 返回"我的"页面
+  goMy() {
+    wx.switchTab({ url: '/pages/my/my' })
+  },
+
   // 长按删除(仅 posted 类型)
   handleLongPress(e) {
     if (this.data.type !== 'posted') return

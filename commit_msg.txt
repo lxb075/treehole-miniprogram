@@ -1,11 +1,7 @@
-fix: 修复点赞"点一次等于两次"的双重计数 bug
+feat: 在收藏/发布/详情页添加"回我的"浮动按钮
 
-根因:addLike 在 "查重命中" 分支会先调一次 updateLocalLike,
-外层 then 又调一次,本地 likeCount 累加两次。
-
-修复:
-- 统一在最末尾更新一次本地状态
-- 已存在的点赞记录不再 add,也不增加 likeCount
-- updateLocalLike 增加 increment 参数,支持幂等切换状态
-- 同步修复 detail 详情页的点赞逻辑
-- 修复 cancelLike 移除 0 条时仍发空 update 的小问题
+- 三个页面右下角加圆形浮动按钮(FAB),点击 switchTab 到 my 页面
+- 按钮样式:暖色渐变 + 阴影,按压有缩放反馈
+- 文案"🌷 回我的",统一交互入口
+- 不影响各页面原有布局,使用 position: fixed
+- 覆盖 pages/favorites / pages/publish / pages/detail
