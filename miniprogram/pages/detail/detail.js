@@ -89,44 +89,25 @@ Page({
     if (!message) return
     if (message._likeLock) return
     this.setData({ 'message._likeLock': true })
-    setTimeout(() => this.setData({ 'message._likeLock': false }), 800)
     const userId = app.globalData.getUserId()
     if (message.hasLiked) {
       this.cancelLike(message._id, userId)
     } else {
-      this.addLike(message._id, userId, false)
+      this.addLike(message._id, userId)
     }
   },
 
-  addLike(messageId, userId, hadLikedBefore) {
-    db.collection('treehole_likes').where({ messageId, userId }).get()
-      .then(res => {
-        if (res.data.length > 0) {
-          // 孤儿记录(UI 未点赞但数据库有)→ 清理后重新 +1
-          if (hadLikedBefore) return { added: false }
-          const removeOps = res.data.map(i =>
-            db.collection('treehole_likes').doc(i._id).remove()
-          )
-          return Promise.all(removeOps).then(() =>
-            db.collection('treehole_likes').add({
-              data: { messageId, userId, createTime: Date.now() }
-            }).then(() => db.collection('treehole_messages').doc(messageId)
-              .update({ data: { likeCount: db.command.inc(1) } }))
-              .then(() => ({ added: true }))
-          )
-        }
-        return db.collection('treehole_likes').add({
-          data: { messageId, userId, createTime: Date.now() }
-        }).then(() => db.collection('treehole_messages').doc(messageId)
-          .update({ data: { likeCount: db.command.inc(1) } }))
-          .then(() => ({ added: true }))
-      })
-      .then(result => {
+  // 点赞:始终 add 一条 + inc(+1),不做嵌套查重
+  addLike(messageId, userId) {
+    db.collection('treehole_likes').add({
+      data: { messageId, userId, createTime: Date.now() }
+    })
+      .then(() => db.collection('treehole_messages').doc(messageId)
+        .update({ data: { likeCount: db.command.inc(1) } }))
+      .then(() => {
         this.setData({
           'message.hasLiked': true,
-          'message.likeCount': result.added
-            ? (this.data.message.likeCount || 0) + 1
-            : this.data.message.likeCount
+          'message.likeCount': (this.data.message.likeCount || 0) + 1
         })
         wx.showToast({ title: '送出一个小心心', icon: 'none' })
       })
@@ -134,32 +115,36 @@ Page({
         console.error('点赞失败:', err)
         wx.showToast({ title: '操作失败', icon: 'none' })
       })
+      .finally(() => {
+        this.setData({ 'message._likeLock': false })
+      })
   },
 
+  // 取消点赞:get → doc.remove → inc(-1)
   cancelLike(messageId, userId) {
-    db.collection('treehole_likes').where({ messageId, userId }).get()
-      .then(res => Promise.all(res.data.map(i => db.collection('treehole_likes').doc(i._id).remove()))
-        .then(() => res.data.length))
-      .then(removed => {
-        if (removed > 0) {
-          return db.collection('treehole_messages').doc(messageId)
-            .update({ data: { likeCount: db.command.inc(-removed) } })
-            .then(() => removed)
-        }
-        return 0
+    db.collection('treehole_likes')
+      .where({ messageId, userId })
+      .limit(1)
+      .get()
+      .then(res => {
+        if (!res.data || res.data.length === 0) return null
+        return db.collection('treehole_likes').doc(res.data[0]._id).remove()
       })
-      .then(removed => {
+      .then(() => db.collection('treehole_messages').doc(messageId)
+        .update({ data: { likeCount: db.command.inc(-1) } }))
+      .then(() => {
         this.setData({
           'message.hasLiked': false,
-          'message.likeCount': removed > 0
-            ? Math.max(0, (this.data.message.likeCount || 0) - removed)
-            : this.data.message.likeCount
+          'message.likeCount': Math.max(0, (this.data.message.likeCount || 0) - 1)
         })
         wx.showToast({ title: '已收回小心心', icon: 'none' })
       })
       .catch(err => {
         console.error('取消点赞失败:', err)
         wx.showToast({ title: '操作失败', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ 'message._likeLock': false })
       })
   },
 
@@ -169,7 +154,6 @@ Page({
     if (!message) return
     if (message._favLock) return
     this.setData({ 'message._favLock': true })
-    setTimeout(() => this.setData({ 'message._favLock': false }), 800)
     const userId = app.globalData.getUserId()
     if (message.hasFavorited) {
       this.removeFav(message._id, userId)
@@ -179,13 +163,9 @@ Page({
   },
 
   addFav(messageId, userId) {
-    db.collection('treehole_favorites').where({ messageId, userId }).get()
-      .then(res => {
-        if (res.data.length > 0) return Promise.resolve()
-        return db.collection('treehole_favorites').add({
-          data: { messageId, userId, createTime: Date.now() }
-        })
-      })
+    db.collection('treehole_favorites').add({
+      data: { messageId, userId, createTime: Date.now() }
+    })
       .then(() => {
         this.setData({ 'message.hasFavorited': true })
         wx.showToast({ title: '已收藏到心里', icon: 'none' })
@@ -194,11 +174,20 @@ Page({
         console.error('收藏失败:', err)
         wx.showToast({ title: '操作失败', icon: 'none' })
       })
+      .finally(() => {
+        this.setData({ 'message._favLock': false })
+      })
   },
 
   removeFav(messageId, userId) {
-    db.collection('treehole_favorites').where({ messageId, userId }).get()
-      .then(res => Promise.all(res.data.map(i => db.collection('treehole_favorites').doc(i._id).remove())))
+    db.collection('treehole_favorites')
+      .where({ messageId, userId })
+      .limit(1)
+      .get()
+      .then(res => {
+        if (!res.data || res.data.length === 0) return null
+        return db.collection('treehole_favorites').doc(res.data[0]._id).remove()
+      })
       .then(() => {
         this.setData({ 'message.hasFavorited': false })
         wx.showToast({ title: '已从收藏移除', icon: 'none' })
@@ -206,6 +195,9 @@ Page({
       .catch(err => {
         console.error('取消收藏失败:', err)
         wx.showToast({ title: '操作失败', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ 'message._favLock': false })
       })
   },
 

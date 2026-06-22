@@ -165,53 +165,24 @@ Page({
 
     if (this.data.likeLock[id]) return
     this.setData({ [`likeLock.${id}`]: true })
-    setTimeout(() => {
-      this.setData({ [`likeLock.${id}`]: false })
-    }, 800)
 
     if (hasLiked) {
       this.cancelLike(id, userId)
     } else {
-      this.addLike(id, userId, false)
+      this.addLike(id, userId)
     }
   },
 
-  addLike(messageId, userId, hadLikedBefore) {
-    db.collection('treehole_likes')
-      .where({ messageId, userId })
-      .get()
-      .then(res => {
-        if (res.data.length > 0) {
-          // 两种情况:
-          // 1. hadLikedBefore=true:正常重复点击,什么都不做(幂等)
-          // 2. hadLikedBefore=false:数据库有记录但 UI 是未点赞
-          //   → 多半是孤儿记录(清缓存/旧 userId 残留),清理后重新 +1
-          if (hadLikedBefore) {
-            return { added: false, count: 0 }
-          }
-          const removeOps = res.data.map(item =>
-            db.collection('treehole_likes').doc(item._id).remove()
-          )
-          return Promise.all(removeOps).then(() =>
-            db.collection('treehole_likes')
-              .add({ data: { messageId, userId, createTime: Date.now() } })
-              .then(() => db.collection('treehole_messages')
-                .doc(messageId)
-                .update({ data: { likeCount: db.command.inc(1) } }))
-              .then(() => ({ added: true, count: 1 }))
-          )
-        }
-        return db.collection('treehole_likes')
-          .add({ data: { messageId, userId, createTime: Date.now() } })
-          .then(() => db.collection('treehole_messages')
-            .doc(messageId)
-            .update({ data: { likeCount: db.command.inc(1) } }))
-          .then(() => ({ added: true, count: 1 }))
-      })
-      .then(result => {
-        // 统一只在最末尾更新一次本地状态
-        this.updateLocalLike(messageId, true, result.added)
-        // 标记用户操作过,防止 checkUserStates 异步回调覆盖
+  // 点赞:始终 add 一条 + inc(+1),不做嵌套查重清理
+  addLike(messageId, userId) {
+    // 第一步:add 记录
+    db.collection('treehole_likes').add({
+      data: { messageId, userId, createTime: Date.now() }
+    })
+      .then(() => db.collection('treehole_messages').doc(messageId)
+        .update({ data: { likeCount: db.command.inc(1) } }))
+      .then(() => {
+        this.updateLocalLike(messageId, true, true)
         this.setData({ [`userTouched.${messageId}`]: true })
         wx.showToast({ title: '送出一个小心心', icon: 'none', duration: 1200 })
       })
@@ -219,37 +190,35 @@ Page({
         console.error('点赞失败:', err)
         wx.showToast({ title: '操作失败,请重试', icon: 'none' })
       })
+      .finally(() => {
+        // 锁由操作完成自动释放,不再用 setTimeout
+        this.setData({ [`likeLock.${messageId}`]: false })
+      })
   },
 
+  // 取消点赞:get 拿 _id → doc.remove → inc(-1),纯串行 3 步
   cancelLike(messageId, userId) {
     db.collection('treehole_likes')
       .where({ messageId, userId })
+      .limit(1)
       .get()
       .then(res => {
-        const removeOps = res.data.map(item =>
-          db.collection('treehole_likes').doc(item._id).remove()
-        )
-        return Promise.all(removeOps).then(() => res.data.length)
+        if (!res.data || res.data.length === 0) return null
+        return db.collection('treehole_likes').doc(res.data[0]._id).remove()
       })
-      .then(removedCount => {
-        if (removedCount > 0) {
-          return db.collection('treehole_messages')
-            .doc(messageId)
-            .update({ data: { likeCount: db.command.inc(-removedCount) } })
-            // 关键:把 removedCount 透传给下一个 then,否则下一个 then 拿到的是 undefined
-            .then(() => removedCount)
-        }
-        return 0
-      })
-      .then(removedCount => {
-        // 统一只在最末尾更新一次本地状态
-        this.updateLocalLike(messageId, false, removedCount > 0)
+      .then(() => db.collection('treehole_messages').doc(messageId)
+        .update({ data: { likeCount: db.command.inc(-1) } }))
+      .then(() => {
+        this.updateLocalLike(messageId, false, true)
         this.setData({ [`userTouched.${messageId}`]: true })
         wx.showToast({ title: '已收回小心心', icon: 'none', duration: 1200 })
       })
       .catch(err => {
         console.error('取消点赞失败:', err)
         wx.showToast({ title: '操作失败,请重试', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ [`likeLock.${messageId}`]: false })
       })
   },
 
@@ -277,9 +246,6 @@ Page({
 
     if (this.data.favLock[id]) return
     this.setData({ [`favLock.${id}`]: true })
-    setTimeout(() => {
-      this.setData({ [`favLock.${id}`]: false })
-    }, 800)
 
     if (hasFavorited) {
       this.removeFavorite(id, userId)
@@ -289,22 +255,11 @@ Page({
   },
 
   addFavorite(messageId, userId) {
-    db.collection('treehole_favorites')
-      .where({ messageId, userId })
-      .get()
-      .then(res => {
-        if (res.data.length > 0) {
-          this.updateLocalFav(messageId, true)
-          this.setData({ [`userTouched.${messageId}`]: true })
-          return Promise.resolve()
-        }
-        return db.collection('treehole_favorites').add({
-          data: { messageId, userId, createTime: Date.now() }
-        })
-      })
+    db.collection('treehole_favorites').add({
+      data: { messageId, userId, createTime: Date.now() }
+    })
       .then(() => {
         this.updateLocalFav(messageId, true)
-        // 标记用户操作过,防止 checkUserStates 异步回调覆盖
         this.setData({ [`userTouched.${messageId}`]: true })
         wx.showToast({ title: '已收藏到心里', icon: 'none', duration: 1200 })
       })
@@ -312,17 +267,19 @@ Page({
         console.error('收藏失败:', err)
         wx.showToast({ title: '收藏失败,请重试', icon: 'none' })
       })
+      .finally(() => {
+        this.setData({ [`favLock.${messageId}`]: false })
+      })
   },
 
   removeFavorite(messageId, userId) {
     db.collection('treehole_favorites')
       .where({ messageId, userId })
+      .limit(1)
       .get()
       .then(res => {
-        const removeOps = res.data.map(item =>
-          db.collection('treehole_favorites').doc(item._id).remove()
-        )
-        return Promise.all(removeOps)
+        if (!res.data || res.data.length === 0) return null
+        return db.collection('treehole_favorites').doc(res.data[0]._id).remove()
       })
       .then(() => {
         this.updateLocalFav(messageId, false)
@@ -332,6 +289,9 @@ Page({
       .catch(err => {
         console.error('取消收藏失败:', err)
         wx.showToast({ title: '操作失败,请重试', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ [`favLock.${messageId}`]: false })
       })
   },
 

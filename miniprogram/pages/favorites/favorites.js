@@ -286,15 +286,9 @@ Page({
   },
 
   addFavorite(messageId, userId) {
-    db.collection('treehole_favorites')
-      .where({ messageId, userId })
-      .get()
-      .then(res => {
-        if (res.data.length > 0) return Promise.resolve()
-        return db.collection('treehole_favorites').add({
-          data: { messageId, userId, createTime: Date.now() }
-        })
-      })
+    db.collection('treehole_favorites').add({
+      data: { messageId, userId, createTime: Date.now() }
+    })
       .then(() => {
         this.updateLocalFav(messageId, true)
         wx.showToast({ title: '已收藏到心里', icon: 'none', duration: 1200 })
@@ -308,12 +302,11 @@ Page({
   removeFavorite(messageId, userId) {
     db.collection('treehole_favorites')
       .where({ messageId, userId })
+      .limit(1)
       .get()
       .then(res => {
-        const removeOps = res.data.map(item =>
-          db.collection('treehole_favorites').doc(item._id).remove()
-        )
-        return Promise.all(removeOps)
+        if (!res.data || res.data.length === 0) return null
+        return db.collection('treehole_favorites').doc(res.data[0]._id).remove()
       })
       .then(() => {
         this.updateLocalFav(messageId, false)
