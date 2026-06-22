@@ -96,16 +96,21 @@ Page({
   addLike(messageId, userId) {
     db.collection('treehole_likes').where({ messageId, userId }).get()
       .then(res => {
-        if (res.data.length > 0) return Promise.resolve()
+        // 已有记录:不再 add 也不增加 likeCount
+        if (res.data.length > 0) return { added: false }
         return db.collection('treehole_likes').add({
           data: { messageId, userId, createTime: Date.now() }
         }).then(() => db.collection('treehole_messages').doc(messageId)
           .update({ data: { likeCount: db.command.inc(1) } }))
+          .then(() => ({ added: true }))
       })
-      .then(() => {
+      .then(result => {
+        // 统一只在最末尾更新一次本地状态
         this.setData({
           'message.hasLiked': true,
-          'message.likeCount': (this.data.message.likeCount || 0) + 1
+          'message.likeCount': result.added
+            ? (this.data.message.likeCount || 0) + 1
+            : this.data.message.likeCount
         })
         wx.showToast({ title: '送出一个小心心', icon: 'none' })
       })
@@ -123,12 +128,16 @@ Page({
         if (removed > 0) {
           return db.collection('treehole_messages').doc(messageId)
             .update({ data: { likeCount: db.command.inc(-removed) } })
+            .then(() => removed)
         }
+        return 0
       })
-      .then(() => {
+      .then(removed => {
         this.setData({
           'message.hasLiked': false,
-          'message.likeCount': Math.max(0, (this.data.message.likeCount || 0) - 1)
+          'message.likeCount': removed > 0
+            ? Math.max(0, (this.data.message.likeCount || 0) - removed)
+            : this.data.message.likeCount
         })
         wx.showToast({ title: '已收回小心心', icon: 'none' })
       })

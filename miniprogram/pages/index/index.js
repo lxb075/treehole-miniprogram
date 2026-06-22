@@ -173,25 +173,24 @@ Page({
       .where({ messageId, userId })
       .get()
       .then(res => {
+        // 已有记录:不再 add 也不增加 likeCount,只标记本地状态
         if (res.data.length > 0) {
-          this.updateLocalLike(messageId, true)
-          return Promise.resolve()
+          return { added: false, count: 0 }
         }
-        return db.collection('treehole_likes').add({
-          data: { messageId, userId, createTime: Date.now() }
-        }).then(() => {
-          return db.collection('treehole_messages')
+        return db.collection('treehole_likes')
+          .add({ data: { messageId, userId, createTime: Date.now() } })
+          .then(() => db.collection('treehole_messages')
             .doc(messageId)
-            .update({ data: { likeCount: db.command.inc(1) } })
-        })
+            .update({ data: { likeCount: db.command.inc(1) } }))
+          .then(() => ({ added: true, count: 1 }))
       })
-      .then(() => {
-        this.updateLocalLike(messageId, true)
+      .then(result => {
+        // 统一只在最末尾更新一次本地状态
+        this.updateLocalLike(messageId, true, result.added)
         wx.showToast({ title: '送出一个小心心', icon: 'none', duration: 1200 })
       })
       .catch(err => {
         console.error('点赞失败:', err)
-        this.updateLocalLike(messageId, false)
         wx.showToast({ title: '操作失败,请重试', icon: 'none' })
       })
   },
@@ -212,26 +211,29 @@ Page({
             .doc(messageId)
             .update({ data: { likeCount: db.command.inc(-removedCount) } })
         }
+        return 0
       })
-      .then(() => {
-        this.updateLocalLike(messageId, false)
+      .then(removedCount => {
+        // 统一只在最末尾更新一次本地状态
+        this.updateLocalLike(messageId, false, removedCount > 0)
         wx.showToast({ title: '已收回小心心', icon: 'none', duration: 1200 })
       })
       .catch(err => {
         console.error('取消点赞失败:', err)
-        this.updateLocalLike(true)
         wx.showToast({ title: '操作失败,请重试', icon: 'none' })
       })
   },
 
-  updateLocalLike(messageId, hasLiked) {
+  // 统一的本地状态更新入口
+  // increment=false 时,只切换 hasLiked,不修改 likeCount(用于"记录已存在"等幂等场景)
+  updateLocalLike(messageId, hasLiked, increment = true) {
     const updatedList = this.data.messageList.map(msg => {
       if (msg._id === messageId) {
-        return {
-          ...msg,
-          hasLiked,
-          likeCount: hasLiked ? msg.likeCount + 1 : Math.max(0, msg.likeCount - 1)
+        let likeCount = msg.likeCount || 0
+        if (increment) {
+          likeCount = hasLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
         }
+        return { ...msg, hasLiked, likeCount }
       }
       return msg
     })
