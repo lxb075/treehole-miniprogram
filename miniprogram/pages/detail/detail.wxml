@@ -1,0 +1,76 @@
+<!-- pages/detail/detail.wxml - 树洞详情 -->
+<view class="container">
+  <!-- 加载中 -->
+  <view class="loading-state" wx:if="{{loading}}">
+    <view class="loading-icon">🍃</view>
+    <text class="loading-text">正在小心翼翼地打开这封信...</text>
+  </view>
+
+  <!-- 加载失败 / 不存在 -->
+  <view class="empty-state" wx:elif="{{!message}}">
+    <view class="empty-icon">🍂</view>
+    <text class="empty-text">这条心事已经被风吹走了</text>
+    <view class="empty-btn" bindtap="onRetry">
+      <text>再试一次</text>
+    </view>
+    <view class="empty-btn secondary" bindtap="goBack" style="margin-top: 20rpx;">
+      <text>返回广场</text>
+    </view>
+  </view>
+
+  <!-- 详情主体 -->
+  <block wx:else>
+    <view class="detail-card">
+      <!-- 头部:匿名身份 + 时间 -->
+      <view class="detail-header">
+        <view class="avatar" style="background: {{message.animal.gradient}};">
+          <text class="avatar-emoji">{{message.animal.emoji}}</text>
+        </view>
+        <view class="user-info">
+          <text class="anonymous-name">{{message.anonymousName}}</text>
+          <text class="create-time">{{formatTime(message.createTime)}}</text>
+        </view>
+      </view>
+
+      <!-- 分割线 -->
+      <view class="divider"></view>
+
+      <!-- 正文 -->
+      <view class="detail-content">
+        <text user-select="true">{{message.content}}</text>
+      </view>
+
+      <!-- 图片(若有) -->
+      <view wx:if="{{message.imageFileID}}" class="detail-image-wrap" bindtap="previewImage">
+        <image class="detail-image" src="{{message.imageFileID}}" mode="widthFix" show-menu-by-longpress="true"></image>
+        <view class="image-tip">点击查看大图</view>
+      </view>
+
+      <!-- 底部互动区 -->
+      <view class="detail-footer">
+        <view
+          class="action-btn like-btn {{message.hasLiked ? 'active' : ''}}"
+          bindtap="handleLike"
+          hover-class="action-btn-hover"
+        >
+          <text class="action-icon">{{message.hasLiked ? '💗' : '🤍'}}</text>
+          <text class="action-text">{{message.hasLiked ? '已喜欢' : '喜欢'}}</text>
+          <text class="action-count">{{message.likeCount || 0}}</text>
+        </view>
+        <view
+          class="action-btn fav-btn {{message.hasFavorited ? 'active' : ''}}"
+          bindtap="handleFavorite"
+          hover-class="action-btn-hover"
+        >
+          <text class="action-icon">{{message.hasFavorited ? '⭐️' : '☆'}}</text>
+          <text class="action-text">{{message.hasFavorited ? '已收藏' : '收藏'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 温馨小语 -->
+    <view class="footer-quote">
+      <text>愿每一句心事都被世界温柔以待 🌿</text>
+    </view>
+  </block>
+</view>

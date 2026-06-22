@@ -1,0 +1,77 @@
+<view class="container">
+  <view class="header">
+    <view class="header-decoration">
+      <text wx:if="{{type === 'favorited'}}">⭐️</text>
+      <text wx:elif="{{type === 'posted'}}">💌</text>
+      <text wx:else>💗</text>
+    </view>
+    <text class="title">{{pageTitle}}</text>
+    <text class="subtitle">{{pageSubtitle}}</text>
+  </view>
+
+  <view class="list-container">
+    <view wx:if="{{loading}}" class="loading-state">
+      <text class="loading-text">正在轻轻翻阅...</text>
+    </view>
+
+    <view wx:elif="{{messageList.length === 0}}" class="empty-state">
+      <view class="empty-icon">
+        <text wx:if="{{type === 'favorited'}}">🌷</text>
+        <text wx:elif="{{type === 'posted'}}">🍃</text>
+        <text wx:else>💌</text>
+      </view>
+      <text class="empty-text" wx:if="{{type === 'favorited'}}">还没有收藏,去树洞里找一句心动的话吧~</text>
+      <text class="empty-text" wx:elif="{{type === 'posted'}}">还没有留下过心事,试着说点什么吧~</text>
+      <text class="empty-text" wx:else>还没有送出过小心心,去温暖一下别人吧~</text>
+    </view>
+
+    <view wx:else>
+      <view
+        wx:for="{{messageList}}"
+        wx:key="_id"
+        class="message-card"
+        bindtap="goDetail"
+        data-id="{{item._id}}"
+        bindlongpress="handleLongPress"
+        data-content="{{item.content}}"
+        hover-class="message-card-hover"
+      >
+        <view class="message-header">
+          <view class="avatar" style="background: {{item.animal.gradient}};">
+            <text class="avatar-emoji">{{item.animal.emoji}}</text>
+          </view>
+          <view class="user-info">
+            <text class="anonymous-name">{{item.anonymousName}}</text>
+            <text class="create-time">{{formatTime(item.createTime)}}</text>
+          </view>
+          <view wx:if="{{type === 'posted'}}" class="delete-hint">
+            <text>长按删除</text>
+          </view>
+        </view>
+        <view class="message-content">
+          <text>{{item.content}}</text>
+        </view>
+        <!-- 图片 -->
+        <view wx:if="{{item.imageFileID}}" class="message-image-wrap" catchtap="previewImage" data-url="{{item.imageFileID}}">
+          <image class="message-image" src="{{item.imageFileID}}" mode="aspectFill"></image>
+        </view>
+        <view class="message-footer">
+          <view class="action-btn like-btn {{item.hasLiked ? 'active' : ''}}">
+            <text class="action-icon">{{item.hasLiked ? '💗' : '🤍'}}</text>
+            <text class="action-count">{{item.likeCount || 0}}</text>
+          </view>
+          <view
+            class="action-btn fav-btn {{item.hasFavorited ? 'active' : ''}}"
+            catchtap="handleFavorite"
+            data-id="{{item._id}}"
+            data-favorited="{{item.hasFavorited}}"
+            hover-class="action-btn-hover"
+          >
+            <text class="action-icon">{{item.hasFavorited ? '⭐️' : '☆'}}</text>
+            <text class="action-text">{{item.hasFavorited ? '已收藏' : '收藏'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

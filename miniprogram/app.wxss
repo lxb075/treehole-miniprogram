@@ -1,5 +1,5 @@
 page {
-  background-color: #F5F7FA;
+  background-color: #FFF5EE;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -12,19 +12,23 @@ page {
 }
 
 .text-primary {
-  color: #667eea;
+  color: #FF8C61;
 }
 
 .text-secondary {
-  color: #666;
+  color: #8B6F5E;
 }
 
 .text-muted {
-  color: #999;
+  color: #B89E8E;
 }
 
 .bg-white {
   background-color: #fff;
+}
+
+.bg-warm {
+  background: linear-gradient(180deg, #FFE5D9 0%, #FFD1B3 100%);
 }
 
 .radius-lg {
@@ -51,34 +55,14 @@ page {
   align-items: center;
 }
 
-.justify-center {
-  justify-content: center;
-}
-
 .justify-between {
   justify-content: space-between;
 }
 
+.justify-center {
+  justify-content: center;
+}
+
 .text-center {
   text-align: center;
-}
-
-.font-bold {
-  font-weight: bold;
-}
-
-.mt-4 {
-  margin-top: 16rpx;
-}
-
-.mt-6 {
-  margin-top: 24rpx;
-}
-
-.mb-4 {
-  margin-bottom: 16rpx;
-}
-
-.mb-6 {
-  margin-bottom: 24rpx;
 }

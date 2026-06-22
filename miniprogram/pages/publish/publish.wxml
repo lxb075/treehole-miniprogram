@@ -1,43 +1,79 @@
 <view class="container">
+  <!-- 顶部用户信息 -->
   <view class="header">
-    <text class="title">发布留言</text>
-    <text class="subtitle">匿名发布，畅所欲言</text>
+    <view class="header-decoration">🍃</view>
+    <text class="title">把心里话说出来</text>
+    <text class="subtitle">这里没有评判,只有温柔的倾听</text>
   </view>
 
+  <!-- 当前用户信息卡 -->
+  <view class="user-card" wx:if="{{currentUser}}">
+    <view class="user-info">
+      <view class="avatar" style="background: {{currentUser.animal.gradient}};">
+        <text wx:if="{{!currentUser.isReal}}" class="avatar-emoji">{{currentUser.animal.emoji}}</text>
+        <image wx:else class="avatar-img" src="{{currentUser.avatarUrl}}"></image>
+      </view>
+      <view class="user-meta">
+        <text class="anonymous-name">{{anonymousName}}</text>
+        <text class="user-tag" wx:if="{{currentUser.isReal}}">已登录</text>
+        <text class="user-tag" wx:else>匿名身份</text>
+      </view>
+    </view>
+    <view class="login-btn" wx:if="{{!currentUser.isReal}}" bindtap="handleAuthorize">
+      <text>点击登录</text>
+    </view>
+    <view class="refresh-btn" wx:else bindtap="refreshName">
+      <text>🎲 换一个</text>
+    </view>
+  </view>
+
+  <!-- 编辑区 -->
   <view class="publish-container">
     <view class="input-area">
-      <textarea 
+      <textarea
         class="content-input"
-        placeholder="写下你想说的话..."
+        placeholder="想说点什么吗?把你的心事,悄悄放进树洞里..."
         maxlength="500"
         bindinput="handleInput"
         value="{{content}}"
+        placeholder-class="input-placeholder"
+        auto-height
       />
       <view class="word-count">
         <text>{{content.length}}/500</text>
       </view>
     </view>
 
-    <view class="anonymous-info">
-      <view class="info-row">
-        <text class="info-label">你的匿名代号</text>
-        <text class="anonymous-name">{{anonymousName}}</text>
+    <!-- 图片上传区 -->
+    <view class="image-upload-area">
+      <view class="upload-title">
+        <text>📷 配图(可选)</text>
       </view>
-      <view class="refresh-btn" bindtap="refreshName">
-        <text>🔄 换一个</text>
+      <view class="image-preview" wx:if="{{imagePath}}" bindtap="previewImage">
+        <image class="preview-img" src="{{imagePath}}" mode="aspectFill"></image>
+        <view class="image-mask" wx:if="{{isUploading}}">
+          <text class="mask-text">上传中...</text>
+        </view>
+        <view class="remove-btn" catchtap="chooseImage">
+          <text>×</text>
+        </view>
+      </view>
+      <view class="upload-btn" wx:else bindtap="chooseImage">
+        <text class="upload-icon">+</text>
+        <text class="upload-text">添加图片</text>
       </view>
     </view>
 
-    <view class="warning">
-      <text>⚠️ 请文明发言，遵守法律法规</text>
+    <view class="warm-tip">
+      <text>🌸 请温柔以待这个世界,也请温柔以待自己</text>
     </view>
 
-    <view 
-      class="publish-btn" 
+    <view
+      class="publish-btn {{content.trim() ? '' : 'disabled'}}"
       bindtap="handlePublish"
-      :class="{ disabled: !content.trim() }"
     >
-      <text>发布留言</text>
+      <text wx:if="{{!isSubmitting}}">放进树洞</text>
+      <text wx:else>放进中...</text>
     </view>
   </view>
 </view>

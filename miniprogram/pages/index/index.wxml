@@ -1,52 +1,107 @@
 <view class="container">
-  <view class="header">
-    <text class="title">校园树洞</text>
-    <text class="subtitle">分享你的心声，倾听他人故事</text>
+  <!-- 顶部用户信息条 -->
+  <view class="header" wx:if="{{currentUser}}">
+    <view class="user-bar" bindtap="goMy">
+      <view class="avatar" style="background: {{currentUser.animal.gradient}};">
+        <text wx:if="{{!currentUser.isReal}}" class="avatar-emoji">{{currentUser.animal.emoji}}</text>
+        <image wx:else class="avatar-img" src="{{currentUser.avatarUrl}}"></image>
+      </view>
+      <view class="user-meta">
+        <text class="user-name">{{currentUser.nickName}}</text>
+        <text class="user-tip" wx:if="{{!currentUser.isReal}}">点击登录 · 认识更真的我</text>
+        <text class="user-tip" wx:else>愿你今天被温柔对待</text>
+      </view>
+      <view class="user-arrow">›</view>
+    </view>
+
+    <view class="title-wrap">
+      <view class="header-decoration">🌿</view>
+      <text class="title">校园树洞</text>
+      <text class="subtitle">把心事说给风听,有人正在认真倾听</text>
+    </view>
   </view>
 
+  <!-- 列表容器 -->
   <view class="list-container">
     <view class="list-header">
-      <text class="list-title">最新留言</text>
-      <text class="list-count">{{messageList.length}} 条</text>
+      <text class="list-title">✨ 最近的心事</text>
+      <text class="list-count">共 {{messageList.length}} 条</text>
     </view>
 
-    <view wx:if="{{messageList.length === 0}}" class="empty-state">
-      <view class="empty-icon">🌳</view>
-      <text class="empty-text">还没有留言，快来发布第一条吧！</text>
+    <!-- 空状态 -->
+    <view wx:if="{{messageList.length === 0 && !isLoading}}" class="empty-state">
+      <view class="empty-icon">🌱</view>
+      <text class="empty-text">树洞还空着,愿意留下你的第一句话吗?</text>
+      <view class="empty-btn" bindtap="goPublish">
+        <text>去说说 →</text>
+      </view>
     </view>
 
-    <scroll-view scroll-y class="message-scroll">
-      <view 
-        wx:for="{{messageList}}" 
-        wx:key="_id" 
+    <!-- 留言列表 -->
+    <scroll-view
+      scroll-y
+      class="message-scroll"
+      bindscrolltolower="loadMore"
+      enhanced
+      show-scrollbar="{{false}}"
+    >
+      <view
+        wx:for="{{messageList}}"
+        wx:key="_id"
         class="message-card"
+        bindtap="goDetail"
+        data-id="{{item._id}}"
+        hover-class="message-card-hover"
       >
         <view class="message-header">
-          <view class="avatar">{{item.anonymousName.charAt(0)}}</view>
+          <view class="avatar" style="background: {{item.animal.gradient}};">
+            <text class="avatar-emoji">{{item.animal.emoji}}</text>
+          </view>
           <view class="user-info">
             <text class="anonymous-name">{{item.anonymousName}}</text>
             <text class="create-time">{{formatTime(item.createTime)}}</text>
           </view>
         </view>
+
         <view class="message-content">
           <text>{{item.content}}</text>
         </view>
+
+        <!-- 图片缩略图(若有) -->
+        <view wx:if="{{item.imageFileID}}" class="message-image-wrap" catchtap="previewImage" data-url="{{item.imageFileID}}">
+          <image class="message-image" src="{{item.imageFileID}}" mode="aspectFill"></image>
+        </view>
+
         <view class="message-footer">
-          <view 
-            class="like-btn" 
-            bindtap="handleLike" 
+          <view
+            class="action-btn like-btn {{item.hasLiked ? 'active' : ''}}"
+            catchtap="handleLike"
             data-id="{{item._id}}"
             data-liked="{{item.hasLiked}}"
+            hover-class="action-btn-hover"
           >
-            <text class="like-icon">{{item.hasLiked ? '❤️' : '🤍'}}</text>
-            <text class="like-count">{{item.likeCount}}</text>
+            <text class="action-icon">{{item.hasLiked ? '💗' : '🤍'}}</text>
+            <text class="action-count">{{item.likeCount || 0}}</text>
+          </view>
+          <view
+            class="action-btn fav-btn {{item.hasFavorited ? 'active' : ''}}"
+            catchtap="handleFavorite"
+            data-id="{{item._id}}"
+            data-favorited="{{item.hasFavorited}}"
+            hover-class="action-btn-hover"
+          >
+            <text class="action-icon">{{item.hasFavorited ? '⭐️' : '☆'}}</text>
+            <text class="action-text">{{item.hasFavorited ? '已收藏' : '收藏'}}</text>
           </view>
         </view>
       </view>
-    </scroll-view>
-  </view>
 
-  <view class="load-more" wx:if="{{hasMore}}">
-    <text bindtap="loadMore" class="load-text">加载更多</text>
+      <!-- 加载更多提示 -->
+      <view class="load-tip" wx:if="{{messageList.length > 0}}">
+        <text wx:if="{{hasMore && !isLoading}}">— 上拉加载更多 —</text>
+        <text wx:elif="{{isLoading}}">加载中...</text>
+        <text wx:else>— 已经到底啦,这里是温柔的尽头 —</text>
+      </view>
+    </scroll-view>
   </view>
 </view>

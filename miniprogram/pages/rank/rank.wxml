@@ -1,37 +1,38 @@
 <view class="container">
   <view class="header">
-    <text class="title">点赞排行榜</text>
-    <text class="subtitle">最受欢迎的留言</text>
+    <view class="header-decoration">🏆</view>
+    <text class="title">暖心榜单</text>
+    <text class="subtitle">这些心声,被温柔地收藏过</text>
   </view>
 
   <view class="list-container">
-    <view class="top-three">
-      <view class="second-place" wx:if="rankList[1]">
+    <view class="top-three" wx:if="{{rankList.length > 0}}">
+      <view class="second-place" wx:if="{{rankList[1]}}">
         <view class="medal">🥈</view>
         <view class="card">
           <view class="avatar">{{rankList[1].anonymousName.charAt(0)}}</view>
           <text class="name">{{rankList[1].anonymousName}}</text>
-          <text class="likes">{{rankList[1].likeCount}} ❤️</text>
+          <text class="likes">{{rankList[1].likeCount}} 💗</text>
           <text class="content">{{rankList[1].content}}</text>
         </view>
       </view>
 
-      <view class="first-place" wx:if="rankList[0]">
-        <view class="medal">🥇</view>
+      <view class="first-place" wx:if="{{rankList[0]}}">
+        <view class="medal">👑</view>
         <view class="card">
           <view class="avatar">{{rankList[0].anonymousName.charAt(0)}}</view>
           <text class="name">{{rankList[0].anonymousName}}</text>
-          <text class="likes">{{rankList[0].likeCount}} ❤️</text>
+          <text class="likes">{{rankList[0].likeCount}} 💗</text>
           <text class="content">{{rankList[0].content}}</text>
         </view>
       </view>
 
-      <view class="third-place" wx:if="rankList[2]">
+      <view class="third-place" wx:if="{{rankList[2]}}">
         <view class="medal">🥉</view>
         <view class="card">
           <view class="avatar">{{rankList[2].anonymousName.charAt(0)}}</view>
           <text class="name">{{rankList[2].anonymousName}}</text>
-          <text class="likes">{{rankList[2].likeCount}} ❤️</text>
+          <text class="likes">{{rankList[2].likeCount}} 💗</text>
           <text class="content">{{rankList[2].content}}</text>
         </view>
       </view>
@@ -39,17 +40,17 @@
 
     <view class="other-ranks">
       <view class="list-header">
-        <text class="list-title">其他热门</text>
-      </view>
-      
-      <view wx:if="{{rankList.length === 0}}" class="empty-state">
-        <view class="empty-icon">🏆</view>
-        <text class="empty-text">还没有点赞记录，快来点赞吧！</text>
+        <text class="list-title">🌟 同样温暖的心声</text>
       </view>
 
-      <view 
-        wx:for="{{rankList.slice(3)}}" 
-        wx:key="_id" 
+      <view wx:if="{{rankList.length === 0}}" class="empty-state">
+        <view class="empty-icon">🌷</view>
+        <text class="empty-text">还没有人收到小心心,去送一个吧~</text>
+      </view>
+
+      <view
+        wx:for="{{rankList.slice(3)}}"
+        wx:key="_id"
         class="rank-item"
         wx:for-index="idx"
       >
@@ -61,7 +62,7 @@
           </view>
           <text class="rank-content">{{item.content}}</text>
         </view>
-        <view class="rank-likes">{{item.likeCount}} ❤️</view>
+        <view class="rank-likes">{{item.likeCount}} 💗</view>
       </view>
     </view>
   </view>

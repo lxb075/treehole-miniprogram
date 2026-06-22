@@ -1,0 +1,93 @@
+<view class="container">
+  <view class="header">
+    <view class="header-decoration">🌷</view>
+    <text class="title">我的小窝</text>
+    <text class="subtitle">这里收藏着属于你的小秘密</text>
+  </view>
+
+  <!-- 用户信息卡(支持登录/未登录切换) -->
+  <view class="profile-card" wx:if="{{currentUser}}">
+    <view class="profile-avatar" style="background: {{currentUser.animal.gradient}};">
+      <text wx:if="{{!currentUser.isReal}}" class="avatar-emoji">{{currentUser.animal.emoji}}</text>
+      <image wx:else class="avatar-img" src="{{currentUser.avatarUrl}}"></image>
+    </view>
+    <view class="profile-info">
+      <text class="profile-name">{{currentUser.nickName}}</text>
+      <text class="profile-tip" wx:if="{{!currentUser.isReal}}">点击登录,展示真实的你</text>
+      <text class="profile-tip" wx:else>愿你今天被温柔对待</text>
+    </view>
+    <view class="login-btn" wx:if="{{!currentUser.isReal}}" bindtap="handleAuthorize">
+      <text>点击登录</text>
+    </view>
+  </view>
+
+  <view class="stats-card">
+    <view class="stat-item" bindtap="goToMyPosts">
+      <text class="stat-num">{{stats.posted}}</text>
+      <text class="stat-label">我的留言</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item" bindtap="goToLiked">
+      <text class="stat-num">{{stats.liked}}</text>
+      <text class="stat-label">送出的心</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item" bindtap="goToFavorites">
+      <text class="stat-num">{{stats.favorited}}</text>
+      <text class="stat-label">收藏</text>
+    </view>
+  </view>
+
+  <view class="menu-card">
+    <view class="menu-item" bindtap="goToFavorites">
+      <view class="menu-icon fav-icon">⭐️</view>
+      <view class="menu-content">
+        <text class="menu-title">我的收藏夹</text>
+        <text class="menu-desc">那些让你心头一暖的句子</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item" bindtap="goToMyPosts">
+      <view class="menu-icon post-icon">💌</view>
+      <view class="menu-content">
+        <text class="menu-title">我的树洞</text>
+        <text class="menu-desc">查看、删除我说过的话</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item" bindtap="goToLiked">
+      <view class="menu-icon like-icon">💗</view>
+      <view class="menu-content">
+        <text class="menu-title">我点过的赞</text>
+        <text class="menu-desc">送出过的每一份温柔</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item" bindtap="goToPublish">
+      <view class="menu-icon write-icon">✍️</view>
+      <view class="menu-content">
+        <text class="menu-title">写点什么</text>
+        <text class="menu-desc">把心事说给树洞听</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="menu-card">
+    <view class="menu-item" bindtap="showAbout">
+      <view class="menu-icon about-icon">🌿</view>
+      <view class="menu-content">
+        <text class="menu-title">关于树洞</text>
+        <text class="menu-desc">愿你被世界温柔以待</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="footer">
+    <text class="footer-text">🌸 每一份心事,都值得被倾听 🌸</text>
+  </view>
+</view>

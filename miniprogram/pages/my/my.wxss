@@ -1,0 +1,241 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FFE5D9 0%, #FFD6BA 40%, #FFEFD5 100%);
+  padding-bottom: 160rpx;
+}
+
+.header {
+  padding: 80rpx 40rpx 40rpx;
+  text-align: center;
+}
+
+.header-decoration {
+  font-size: 64rpx;
+  margin-bottom: 12rpx;
+}
+
+.title {
+  font-size: 60rpx;
+  font-weight: bold;
+  color: #8B5A3C;
+  display: block;
+  margin-bottom: 16rpx;
+  letter-spacing: 4rpx;
+}
+
+.subtitle {
+  font-size: 26rpx;
+  color: #B07A5C;
+  letter-spacing: 2rpx;
+}
+
+.profile-card {
+  background: linear-gradient(135deg, #FFB997 0%, #F8AD7B 100%);
+  border-radius: 28rpx;
+  margin: 0 32rpx 28rpx;
+  padding: 36rpx 32rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 10rpx 30rpx rgba(255, 154, 139, 0.3);
+}
+
+.profile-avatar {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: bold;
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profile-avatar .avatar-emoji {
+  font-size: 64rpx;
+  line-height: 1;
+}
+
+.profile-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.profile-info {
+  flex: 1;
+  margin-left: 28rpx;
+  color: #fff;
+  min-width: 0;
+}
+
+.profile-name {
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-bottom: 8rpx;
+  letter-spacing: 1rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-tip {
+  font-size: 24rpx;
+  opacity: 0.9;
+  letter-spacing: 1rpx;
+  display: block;
+}
+
+.login-btn {
+  background: rgba(255, 255, 255, 0.95);
+  color: #FF8C61;
+  padding: 16rpx 28rpx;
+  border-radius: 50rpx;
+  font-size: 26rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.login-btn text {
+  color: #FF8C61;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.stats-card {
+  background: #FFFAF5;
+  border-radius: 24rpx;
+  margin: 0 32rpx 28rpx;
+  padding: 36rpx 0;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 6rpx 20rpx rgba(255, 184, 140, 0.12);
+  border: 2rpx solid #FFF0E0;
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8rpx 0;
+}
+
+.stat-num {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #F8AD7B;
+  margin-bottom: 6rpx;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #B07A5C;
+  letter-spacing: 1rpx;
+}
+
+.stat-divider {
+  width: 2rpx;
+  height: 60rpx;
+  background: #FFE5D0;
+}
+
+.menu-card {
+  background: #FFFAF5;
+  border-radius: 24rpx;
+  margin: 0 32rpx 24rpx;
+  padding: 8rpx 0;
+  box-shadow: 0 6rpx 20rpx rgba(255, 184, 140, 0.12);
+  border: 2rpx solid #FFF0E0;
+  overflow: hidden;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 32rpx;
+  border-bottom: 1rpx solid #FFF0E0;
+  transition: background 0.2s;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item:active {
+  background: #FFF5EC;
+}
+
+.menu-icon {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38rpx;
+  margin-right: 24rpx;
+}
+
+.fav-icon {
+  background: linear-gradient(135deg, #FFF3B0 0%, #FFE066 100%);
+}
+
+.post-icon {
+  background: linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%);
+}
+
+.like-icon {
+  background: linear-gradient(135deg, #FFD1DC 0%, #FF9A8B 100%);
+}
+
+.write-icon {
+  background: linear-gradient(135deg, #D4F1D4 0%, #B8E0B8 100%);
+}
+
+.about-icon {
+  background: linear-gradient(135deg, #FFE5D9 0%, #FFCBA4 100%);
+}
+
+.menu-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #5C4033;
+  margin-bottom: 4rpx;
+  letter-spacing: 1rpx;
+}
+
+.menu-desc {
+  font-size: 22rpx;
+  color: #B89E8E;
+  letter-spacing: 1rpx;
+}
+
+.menu-arrow {
+  font-size: 40rpx;
+  color: #D4B8A4;
+  font-weight: 300;
+}
+
+.footer {
+  text-align: center;
+  padding: 40rpx 32rpx 0;
+}
+
+.footer-text {
+  font-size: 24rpx;
+  color: #C9A98E;
+  letter-spacing: 4rpx;
+}

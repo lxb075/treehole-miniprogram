@@ -2,38 +2,47 @@
   "pages": [
     "pages/index/index",
     "pages/publish/publish",
-    "pages/rank/rank"
+    "pages/rank/rank",
+    "pages/my/my",
+    "pages/favorites/favorites",
+    "pages/detail/detail"
   ],
   "window": {
-    "backgroundColor": "#F5F7FA",
+    "backgroundColor": "#FFF5EE",
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#67C23A",
+    "navigationBarBackgroundColor": "#FFB997",
     "navigationBarTitleText": "校园树洞",
     "navigationBarTextStyle": "white"
   },
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#67C23A",
-    "borderStyle": "black",
-    "backgroundColor": "#ffffff",
+    "color": "#A88B7A",
+    "selectedColor": "#FF8C61",
+    "borderStyle": "white",
+    "backgroundColor": "#FFFFFF",
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "最新留言",
+        "text": "树洞",
         "iconPath": "images/tab/home.png",
         "selectedIconPath": "images/tab/home-active.png"
       },
       {
         "pagePath": "pages/publish/publish",
-        "text": "发布留言",
+        "text": "倾诉",
         "iconPath": "images/tab/publish.png",
         "selectedIconPath": "images/tab/publish-active.png"
       },
       {
         "pagePath": "pages/rank/rank",
-        "text": "点赞排行",
+        "text": "暖心榜",
         "iconPath": "images/tab/rank.png",
         "selectedIconPath": "images/tab/rank-active.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "images/tab/usercenter.png",
+        "selectedIconPath": "images/tab/usercenter-active.png"
       }
     ]
   },

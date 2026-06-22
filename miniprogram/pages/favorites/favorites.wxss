@@ -1,0 +1,219 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FFE5D9 0%, #FFD6BA 40%, #FFEFD5 100%);
+  padding-bottom: 160rpx;
+}
+
+.header {
+  padding: 80rpx 40rpx 40rpx;
+  text-align: center;
+}
+
+.header-decoration {
+  font-size: 64rpx;
+  margin-bottom: 12rpx;
+}
+
+.title {
+  font-size: 56rpx;
+  font-weight: bold;
+  color: #8B5A3C;
+  display: block;
+  margin-bottom: 16rpx;
+  letter-spacing: 4rpx;
+}
+
+.subtitle {
+  font-size: 26rpx;
+  color: #B07A5C;
+  letter-spacing: 2rpx;
+}
+
+.list-container {
+  background: #FFFAF5;
+  border-radius: 36rpx 36rpx 0 0;
+  padding: 32rpx;
+  min-height: 60vh;
+  box-shadow: 0 -8rpx 30rpx rgba(255, 184, 140, 0.15);
+}
+
+.loading-state {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #B89E8E;
+  letter-spacing: 2rpx;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 140rpx 0;
+}
+
+.empty-icon {
+  font-size: 96rpx;
+  margin-bottom: 28rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #B89E8E;
+  letter-spacing: 2rpx;
+  line-height: 1.7;
+  padding: 0 60rpx;
+}
+
+.message-card {
+  background: #FFFCF7;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(255, 184, 140, 0.1);
+  border: 2rpx solid #FFF0E0;
+  transition: transform 0.2s;
+}
+
+.message-card-hover {
+  transform: scale(0.98);
+  background: #FFF8EE;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(255, 154, 139, 0.3);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-emoji {
+  font-size: 42rpx;
+  line-height: 1;
+}
+
+.delete-hint {
+  font-size: 22rpx;
+  color: #B89E8E;
+  background: #FFF0E0;
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+}
+
+.delete-hint text {
+  font-size: 22rpx;
+  color: #B07A5C;
+}
+
+.user-info {
+  margin-left: 20rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.anonymous-name {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #8B5A3C;
+  margin-bottom: 6rpx;
+}
+
+.create-time {
+  font-size: 22rpx;
+  color: #C9A98E;
+}
+
+.message-content {
+  font-size: 30rpx;
+  color: #5C4033;
+  line-height: 1.7;
+  margin-bottom: 20rpx;
+  white-space: pre-wrap;
+  letter-spacing: 1rpx;
+}
+
+.message-image-wrap {
+  margin-bottom: 20rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.message-image {
+  width: 100%;
+  max-height: 360rpx;
+  border-radius: 16rpx;
+  display: block;
+  background: #f0e6dc;
+}
+
+.message-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12rpx;
+  border-top: 1rpx dashed #F5E1D0;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 22rpx;
+  background: #FFF5EC;
+  border-radius: 32rpx;
+  border: 2rpx solid #FFE5D0;
+  transition: all 0.2s;
+}
+
+.action-btn-hover {
+  transform: scale(0.96);
+  background: #FFE8D6;
+}
+
+.action-icon {
+  font-size: 30rpx;
+  margin-right: 8rpx;
+}
+
+.action-count {
+  font-size: 26rpx;
+  color: #A88B7A;
+  font-weight: 500;
+}
+
+.action-text {
+  font-size: 26rpx;
+  color: #A88B7A;
+}
+
+.like-btn.active {
+  background: linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%);
+  border-color: #FFB6C1;
+}
+
+.like-btn.active .action-count {
+  color: #C2484A;
+  font-weight: bold;
+}
+
+.fav-btn.active {
+  background: linear-gradient(135deg, #FFF3B0 0%, #FFE066 100%);
+  border-color: #FFE066;
+}
+
+.fav-btn.active .action-text {
+  color: #B8860B;
+  font-weight: bold;
+}
