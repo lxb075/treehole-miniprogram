@@ -83,46 +83,46 @@ Page({
     })
   },
 
-  // 点赞
+  // 点赞:乐观更新架构
   handleLike() {
     const message = this.data.message
     if (!message) return
     if (message._likeLock) return
     this.setData({ 'message._likeLock': true })
+
+    const hasLiked = !!message.hasLiked
+    // 1. 立即更新 UI
+    this.setData({
+      'message.hasLiked': !hasLiked,
+      'message.likeCount': hasLiked
+        ? Math.max(0, (this.data.message.likeCount || 0) - 1)
+        : (this.data.message.likeCount || 0) + 1
+    })
+    wx.showToast({
+      title: hasLiked ? '已收回小心心' : '送出一个小心心',
+      icon: 'none'
+    })
+
+    // 2. 异步云调用
     const userId = app.globalData.getUserId()
-    if (message.hasLiked) {
-      this.cancelLike(message._id, userId)
-    } else {
-      this.addLike(message._id, userId)
-    }
+    const op = hasLiked
+      ? this.cancelLikeRemote(message._id, userId)
+      : this.addLikeRemote(message._id, userId)
+    op.catch(err => console.warn('点赞云端同步失败(不影响UI):', err))
+
+    setTimeout(() => this.setData({ 'message._likeLock': false }), 300)
   },
 
-  // 点赞:始终 add 一条 + inc(+1),不做嵌套查重
-  addLike(messageId, userId) {
-    db.collection('treehole_likes').add({
+  addLikeRemote(messageId, userId) {
+    return db.collection('treehole_likes').add({
       data: { messageId, userId, createTime: Date.now() }
     })
       .then(() => db.collection('treehole_messages').doc(messageId)
         .update({ data: { likeCount: db.command.inc(1) } }))
-      .then(() => {
-        this.setData({
-          'message.hasLiked': true,
-          'message.likeCount': (this.data.message.likeCount || 0) + 1
-        })
-        wx.showToast({ title: '送出一个小心心', icon: 'none' })
-      })
-      .catch(err => {
-        console.error('点赞失败:', err)
-        wx.showToast({ title: '操作失败', icon: 'none' })
-      })
-      .finally(() => {
-        this.setData({ 'message._likeLock': false })
-      })
   },
 
-  // 取消点赞:get → doc.remove → inc(-1)
-  cancelLike(messageId, userId) {
-    db.collection('treehole_likes')
+  cancelLikeRemote(messageId, userId) {
+    return db.collection('treehole_likes')
       .where({ messageId, userId })
       .limit(1)
       .get()
@@ -132,72 +132,47 @@ Page({
       })
       .then(() => db.collection('treehole_messages').doc(messageId)
         .update({ data: { likeCount: db.command.inc(-1) } }))
-      .then(() => {
-        this.setData({
-          'message.hasLiked': false,
-          'message.likeCount': Math.max(0, (this.data.message.likeCount || 0) - 1)
-        })
-        wx.showToast({ title: '已收回小心心', icon: 'none' })
-      })
-      .catch(err => {
-        console.error('取消点赞失败:', err)
-        wx.showToast({ title: '操作失败', icon: 'none' })
-      })
-      .finally(() => {
-        this.setData({ 'message._likeLock': false })
-      })
   },
 
-  // 收藏
+  // 收藏:乐观更新架构
   handleFavorite() {
     const message = this.data.message
     if (!message) return
     if (message._favLock) return
     this.setData({ 'message._favLock': true })
+
+    const hasFavorited = !!message.hasFavorited
+    // 1. 立即更新 UI
+    this.setData({ 'message.hasFavorited': !hasFavorited })
+    wx.showToast({
+      title: hasFavorited ? '已从收藏移除' : '已收藏到心里',
+      icon: 'none'
+    })
+
+    // 2. 异步云调用
     const userId = app.globalData.getUserId()
-    if (message.hasFavorited) {
-      this.removeFav(message._id, userId)
-    } else {
-      this.addFav(message._id, userId)
-    }
+    const op = hasFavorited
+      ? this.removeFavRemote(message._id, userId)
+      : this.addFavRemote(message._id, userId)
+    op.catch(err => console.warn('收藏云端同步失败(不影响UI):', err))
+
+    setTimeout(() => this.setData({ 'message._favLock': false }), 300)
   },
 
-  addFav(messageId, userId) {
-    db.collection('treehole_favorites').add({
+  addFavRemote(messageId, userId) {
+    return db.collection('treehole_favorites').add({
       data: { messageId, userId, createTime: Date.now() }
     })
-      .then(() => {
-        this.setData({ 'message.hasFavorited': true })
-        wx.showToast({ title: '已收藏到心里', icon: 'none' })
-      })
-      .catch(err => {
-        console.error('收藏失败:', err)
-        wx.showToast({ title: '操作失败', icon: 'none' })
-      })
-      .finally(() => {
-        this.setData({ 'message._favLock': false })
-      })
   },
 
-  removeFav(messageId, userId) {
-    db.collection('treehole_favorites')
+  removeFavRemote(messageId, userId) {
+    return db.collection('treehole_favorites')
       .where({ messageId, userId })
       .limit(1)
       .get()
       .then(res => {
         if (!res.data || res.data.length === 0) return null
         return db.collection('treehole_favorites').doc(res.data[0]._id).remove()
-      })
-      .then(() => {
-        this.setData({ 'message.hasFavorited': false })
-        wx.showToast({ title: '已从收藏移除', icon: 'none' })
-      })
-      .catch(err => {
-        console.error('取消收藏失败:', err)
-        wx.showToast({ title: '操作失败', icon: 'none' })
-      })
-      .finally(() => {
-        this.setData({ 'message._favLock': false })
       })
   },
 

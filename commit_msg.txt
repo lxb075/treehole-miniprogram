@@ -1,19 +1,21 @@
-fix: 重写点赞/收藏逻辑,消除嵌套 Promise 与提前解锁
+refactor: 改为"乐观更新"架构,彻底解决云端 timeout 影响交互
 
-根因:
-- 旧 addLike 在有孤儿记录时串联 get + remove*多 + add + inc,
-  3~5 个云调用排队累加,触发云开发 SDK 内部 timeout
-- 旧 likeLock 用 setTimeout(800ms) 提前释放,云调用未完成锁就开了,
-  用户连点导致并发执行、状态错乱
-- removeOps = res.data.map(item => ...remove()) 这种
-  map+Promise.all 的嵌套,错误容易在链中间丢失
+架构变更(架构层修复,不再是局部修补):
+- 旧:云端为权威 + 本地为缓存 → 云端 timeout 时 UI 卡住
+- 新:本地为权威 + 云端为备份(乐观更新 + fire-and-forget)
 
-修法:
-- addLike: 纯串行 2 步:add 一条 + inc(+1),不再查重清理
-- cancelLike: 纯串行 3 步:get(limit 1) → doc.remove → inc(-1)
-- addFavorite/removeFavorite: 同样精简到 2~3 步串行
-- likeLock 改成 .finally() 自动释放,云调用完才解锁
-- 数字变化统一通过 inc 由云端维护,UI 用本地 state 反映
-- 同步修复 detail.js 和 favorites.js 的一致性问题
+核心思想:
+- UI 立即变:心变红/白、数字 +1/-1、toast 立即弹出
+- 云调用异步发送,失败用 console.warn 记录但不阻塞、不回滚
+- 锁 300ms 后释放(只防快速连点,不依赖云端响应)
+- 即使云开发 SDK 内部 timeout(WAServiceMainContext),用户也感受不到
 
-行为: 点一下 → 红心+1;再点一下 → 白心-1,可靠
+代码变化:
+- handleLike / handleFavorite: 拆分为 UI 更新 + 异步云调用两段
+- 新增 *Remote 系列方法:只负责云端同步,不更新 UI
+- 移除了所有"云调用完成后再更新 UI"的串行逻辑
+- 错误处理从 wx.showToast 改为 console.warn(避免打扰用户)
+
+适用场景:云开发环境慢/不稳定时,仍能流畅交互。
+数据一致性:短期可能不一致(刷新页面会看到云端真实状态),
+本应用是个人使用,影响可接受。

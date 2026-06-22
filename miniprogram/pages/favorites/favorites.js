@@ -273,51 +273,45 @@ Page({
     })
   },
 
-  // 切换收藏状态
+  // 收藏:乐观更新架构
   handleFavorite(e) {
     const id = e.currentTarget.dataset.id
     const hasFavorited = e.currentTarget.dataset.favorited === 'true'
     const userId = app.globalData.getUserId()
-    if (hasFavorited) {
-      this.removeFavorite(id, userId)
+
+    // 1. 立即更新 UI
+    this.updateLocalFav(id, !hasFavorited)
+    if (!hasFavorited) {
+      wx.showToast({ title: '已收藏到心里', icon: 'none', duration: 1000 })
     } else {
-      this.addFavorite(id, userId)
+      wx.showToast({ title: '已从收藏移除', icon: 'none', duration: 1000 })
+      // 收藏夹类型:取消收藏后从列表中移除
+      if (this.data.type === 'favorited') {
+        this.setData({ messageList: this.data.messageList.filter(m => m._id !== id) })
+      }
     }
+
+    // 2. 异步云调用
+    const op = hasFavorited
+      ? this.removeFavRemote(id, userId)
+      : this.addFavRemote(id, userId)
+    op.catch(err => console.warn('收藏云端同步失败(不影响UI):', err))
   },
 
-  addFavorite(messageId, userId) {
-    db.collection('treehole_favorites').add({
+  addFavRemote(messageId, userId) {
+    return db.collection('treehole_favorites').add({
       data: { messageId, userId, createTime: Date.now() }
     })
-      .then(() => {
-        this.updateLocalFav(messageId, true)
-        wx.showToast({ title: '已收藏到心里', icon: 'none', duration: 1200 })
-      })
-      .catch(err => {
-        console.error('收藏失败:', err)
-        wx.showToast({ title: '收藏失败,请重试', icon: 'none' })
-      })
   },
 
-  removeFavorite(messageId, userId) {
-    db.collection('treehole_favorites')
+  removeFavRemote(messageId, userId) {
+    return db.collection('treehole_favorites')
       .where({ messageId, userId })
       .limit(1)
       .get()
       .then(res => {
         if (!res.data || res.data.length === 0) return null
         return db.collection('treehole_favorites').doc(res.data[0]._id).remove()
-      })
-      .then(() => {
-        this.updateLocalFav(messageId, false)
-        if (this.data.type === 'favorited') {
-          this.setData({ messageList: this.data.messageList.filter(m => m._id !== messageId) })
-        }
-        wx.showToast({ title: '已从收藏移除', icon: 'none', duration: 1200 })
-      })
-      .catch(err => {
-        console.error('取消收藏失败:', err)
-        wx.showToast({ title: '操作失败,请重试', icon: 'none' })
       })
   },
 
